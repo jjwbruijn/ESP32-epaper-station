@@ -151,7 +151,7 @@ void radioTx(const void __xdata* packetP)		//waits for tx end
 	
 	CFGPAGE = bkp;
 	
-//	RADIO_unk_C8 = 0xff;		///stock fw does this but seems unnecessary
+	RADIO_unk_C8 = 0xff;		///stock fw does this but seems unnecessary
 	
 	//wait for tx to start
 	wait = 0;
@@ -163,7 +163,7 @@ void radioTx(const void __xdata* packetP)		//waits for tx end
 	//wait for tx to end
 	while (!mAckTimePassed);
 	
-//	RADIO_unk_C8 = 0x7f;		///stock fw does this but seems unnecessary
+	RADIO_unk_C8 = 0x7f;		///stock fw does this but seems unnecessary
 }
 
 void radioRxAckReset(void)

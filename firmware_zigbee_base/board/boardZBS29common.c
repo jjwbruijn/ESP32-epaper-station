@@ -141,25 +141,3 @@ static uint32_t prvUpdateApplierGet(void) __naked
 		"00099$:						\n"
 	);
 }
-
-void selfUpdate(void)
-{
-	uint32_t updaterInfo = prvUpdateApplierGet();
-	uint8_t __code *src = (uint8_t __code*)updaterInfo;
-	uint8_t i, len = updaterInfo >> 16;
-	uint8_t __xdata *dst = mScreenRow;
-	
-	for (i = len; i ; i--)
-		*dst++ = *src++;
-
-	if (!flashWrite(0xfc00, mScreenRow, len, true))
-		pr("failed to write updater\n");
-
-	IEN_EA = 0;	//ints off
-	
-	__asm__(
-		"	mov dptr, #0xfc00			\n"
-		"	clr a						\n"
-		"	jmp @a+dptr					\n"
-	);
-}

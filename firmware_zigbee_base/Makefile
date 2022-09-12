@@ -2,8 +2,8 @@
 BUILD		?= zbs29v033
 
 #file containing main() must be first!
-SOURCES		+= main.c eeprom.c
-SOURCES		+= comms.c settings.c
+SOURCES		+= main.c
+SOURCES		+= comms.c
 
 
 all:	#make sure it is the first target
@@ -17,13 +17,7 @@ FLAGS += -Icpu/$(CPU)
 
 SOURCES += cpu/$(CPU)/cpu.c
 SOURCES += board/$(BUILD)/board.c
-SOURCES += board/$(BUILD)/screen.c
 
-EEPROMDRV ?= eeprom.c
-
-
-
-SOURCES += $(EEPROMDRV)
 FLAGS += -I.
 
 

@@ -13,9 +13,6 @@
 
 #define COMMS_MAX_PACKET_SZ				(127)
 
-bool commsTx(struct CommsInfo __xdata *info, bool bcast, const void __xdata *packet, uint8_t len);
-int8_t commsRx(struct CommsInfo __xdata *info, void __xdata *data, uint8_t __xdata *fromMac);	//returns length or COMMS_RX_ERR_*
-
 int8_t commsRxUnencrypted(void __xdata *data);
 bool commsTxUnencrypted(const void __xdata *packetP, uint8_t len);
 

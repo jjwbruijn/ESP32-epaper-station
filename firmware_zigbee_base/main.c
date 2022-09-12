@@ -6,86 +6,20 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "adc.h"
-#include "asmUtil.h"
 #include "board.h"
-
 #include "comms.h"
 #include "cpu.h"
 #include "printf.h"
 #include "proto.h"
 #include "radio.h"
-#include "sleep.h"
 #include "timer.h"
 #include "wdt.h"
 
-static const uint64_t __code VERSIONMARKER mVersionRom = 0x0000011100000000ull;
+uint16_t version = 0x0001;
 
-static uint64_t __xdata mVersion;
 static uint8_t __xdata mRxBuf[COMMS_MAX_PACKET_SZ];
-static uint32_t __idata mTimerWaitStart;
-//static struct CommsInfo __xdata mCi;
+
 uint8_t __xdata mSelfMac[8];
-uint16_t __xdata battery_voltage = 0;
-int8_t __xdata mCurTemperature;
-
-const char __xdata *fwVerString(void) {
-    static char __xdata fwVer[32];
-
-    if (!fwVer[0]) {
-        spr(fwVer, "FW v%u.%u.%*u.%*u",
-            *(((uint8_t __xdata *)&mVersion) + 5),
-            *(((uint8_t __xdata *)&mVersion) + 4),
-            (uintptr_near_t)(((uint8_t __xdata *)&mVersion) + 2),
-            (uintptr_near_t)(((uint8_t __xdata *)&mVersion) + 0));
-    }
-
-    return fwVer;
-}
-
-const char __xdata *voltString(void) {
-    static char __xdata voltStr[32];
-
-    if (!voltStr[0]) {
-        spr(voltStr, "%u.%uV",
-            (uint16_t)mathPrvDiv32x16(battery_voltage, 1000), mathPrvDiv16x8(mathPrvMod32x16(battery_voltage, 1000), 100));
-    }
-
-    return voltStr;
-}
-
-void getVolt(void) {
-    if (battery_voltage == 0)
-        battery_voltage = adcSampleBattery();
-}
-
-const char __xdata *macSmallString(void) {
-    static char __xdata macStr[32];
-
-    if (!macStr[0]) {
-        spr(macStr, "%02X%02X%02X%02X%02X%02X%02X%02X",
-            mSelfMac[7],
-            mSelfMac[6],
-            mSelfMac[5],
-            mSelfMac[4],
-            mSelfMac[3],
-            mSelfMac[2],
-            mSelfMac[1],
-            mSelfMac[0]);
-    }
-
-    return macStr;
-}
-
-const char __xdata *macString(void) {
-    static char __xdata macStr[28];
-
-    if (!macStr[0])
-        spr(macStr, "%M", (uintptr_near_t)mSelfMac);
-
-    return macStr;
-}
-
 uint8_t __xdata cmdbuffer[4];
 uint8_t __xdata packetp[128];
 uint8_t __xdata pktindex = 0;
@@ -113,15 +47,21 @@ void processSerial(uint8_t lastchar) {
                 memset(cmdbuffer, 0x00, 4);
             }
             if (strncmp(cmdbuffer, "MAC?", 4) == 0) {
-                pr("MAC>%02X%02X%02X%02X%02X%02X%02X%02X", mSelfMac[0], mSelfMac[1], mSelfMac[2], mSelfMac[3], mSelfMac[4], mSelfMac[5], mSelfMac[6], mSelfMac[7]);
+                pr("MAC>%02X%02X%02X%02X%02X%02X%02X%02X\n", mSelfMac[0], mSelfMac[1], mSelfMac[2], mSelfMac[3], mSelfMac[4], mSelfMac[5], mSelfMac[6], mSelfMac[7]);
             }
+            if (strncmp(cmdbuffer, "VER?", 4) == 0) {
+                pr("VER>%04X\n", version);
+            }
+            if (strncmp(cmdbuffer, "RSET", 4) == 0) {
+                wdtDeviceReset();
+            }
+
             break;
         case ZBS_RX_WAIT_PKT_LEN:
             cmdbuffer[charindex] = lastchar;
             charindex++;
             if (charindex == 2) {
                 pktlen = (uint8_t)strtoul(cmdbuffer, NULL, 16);
-                pr("PKT_LEN=%02X\n", pktlen);
                 pktindex = 0;
                 charindex = 0;
                 RXState = ZBS_RX_WAIT_SEP1;
@@ -139,7 +79,6 @@ void processSerial(uint8_t lastchar) {
                 packetp[pktindex] = curbyte;
                 pktindex++;
                 if (pktindex == pktlen) {
-                    pr("PKT_SENT");
                     commsTxUnencrypted(packetp, pktlen);
                     RXState = ZBS_RX_WAIT_HEADER;
                 }
@@ -158,8 +97,6 @@ void main(void) {
 
     irqsOn();
 
-    pr("booted at 0x%04x\n", (uintptr_near_t)&main);
-
     boardInitStage2();
 
     if (!boardGetOwnMac(mSelfMac)) {
@@ -167,19 +104,17 @@ void main(void) {
         while (1)
             ;
     }
-    // pr("MAC:%ls\n", (uintptr_near_t)macString());
 
-    // mCurTemperature = adcSampleTemperature();
-    // pr("temp: %d\n", mCurTemperature);
-
-    // for zbs, this must follow temp reading
     radioInit();
-
     radioRxFilterCfg(mSelfMac, 0x10000, PROTO_PAN_ID);
+
+    pr("MAC>%02X%02X%02X%02X%02X%02X%02X%02X\n", mSelfMac[0], mSelfMac[1], mSelfMac[2], mSelfMac[3], mSelfMac[4], mSelfMac[5], mSelfMac[6], mSelfMac[7]);
+    pr("VER>%04X\n", version);
 
     // init the "random" number generation unit
     rndSeed(mSelfMac[0] ^ (uint8_t)timerGetLowBits(), mSelfMac[1]);
-
+    //wdtSetResetVal(0xFE0DCF); // watchdog doesn't seem to want to be petted, keeps barking.
+    //wdtOn();
     if (1) {
         radioSetChannel(RADIO_FIRST_CHANNEL);
         radioSetTxPower(10);
@@ -187,22 +122,20 @@ void main(void) {
         uint8_t __xdata fromMac[8];
         pr("RDY>\n");
         while (1) {
-            int8_t ret = commsRxUnencrypted(mRxBuf);  // commsRx(&mCi, mRxBuf, fromMac);
+            int8_t ret = commsRxUnencrypted(mRxBuf);
             if (ret > 1) {
                 pr("PKT>%02X|", ret);
                 for (uint8_t len = 0; len < ret; len++) {
                     pr("%02X", mRxBuf[len]);
                 }
-                pr("|%02X%02X", mLastRSSI, mLastLqi);
+                // pr("|%02X%02X", mLastRSSI, mLastLqi); // reading RSSI/LQI seems broken... Needs to be fixed
                 pr("<END\n");
             }
 
             if (uartBytesAvail()) {
                 processSerial(uartRx());
             }
+            //wdtPet();
         }
-        powerPortsDownForSleep();
-        sleepForMsec(10000);
-        wdtDeviceReset();
     }
 }
