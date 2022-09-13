@@ -25,7 +25,7 @@ void sendPending(uint8_t* dst) {
     struct PendingInfo* pi = (struct PendingInfo*)(data + 1);
     *data = PKT_CHECKOUT;
     memset(pi, 0, sizeof(struct PendingInfo));
-    pi->imgUpdateVer = 7138543897416935771; 
+    pi->imgUpdateVer = 7138543897416935773; 
     // this determines wheter or not a tag will update! Note that tag use the highest 'ver' to see if an update is needed, since this 
     // normally derived from file timestamp. We don't have that on the ESP32 just yet, so enter a pretty high number here and you should be good.
     // If a tag only checks in without requesting an update, this is where your problem lies.

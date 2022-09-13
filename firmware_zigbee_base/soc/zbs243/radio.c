@@ -121,15 +121,17 @@ void radioTx(const void __xdata* packetP)		//waits for tx end
 	uint8_t bkp, wait;
 	__bit irqs;
 	
-	/*
+	
 		//this is how to do CCA. we do not bother because fuck it
-		for (i = 0; i < 0x80; i++) {
+		//this is how WE do CCA. 'Fuck it' still somewhat applies if we don't get a clear channel in a reasonable amount of time
+		for (uint8_t i = 0; i < 0x80; i++) {
 			if (!(RADIO_curRfState & 1)) {
-				pr("radio CCA fail\n");
-				return;
+				//pr("radio CCA fail\n");
+				timerDelay(TIMER_TICKS_PER_SECOND / 2000);
+				//return;
 			}
 		}
-	*/
+	
 	
 	mAckTimePassed = false;
 	mGotAck = false;

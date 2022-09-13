@@ -3,7 +3,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "board.h"
@@ -15,7 +14,7 @@
 #include "timer.h"
 #include "wdt.h"
 
-uint16_t version = 0x0001;
+uint16_t version = 0x0002;
 
 static uint8_t __xdata mRxBuf[COMMS_MAX_PACKET_SZ];
 
@@ -23,7 +22,6 @@ uint8_t __xdata mSelfMac[8];
 uint8_t __xdata cmdbuffer[4];
 uint8_t __xdata packetp[128];
 uint8_t __xdata pktindex = 0;
-uint8_t __xdata charindex = 0;
 uint8_t __xdata RXState = 0;
 uint8_t __xdata pktlen = 0;
 
@@ -43,7 +41,6 @@ void processSerial(uint8_t lastchar) {
             cmdbuffer[3] = lastchar;
             if (strncmp(cmdbuffer, "PKT>", 4) == 0) {
                 RXState = ZBS_RX_WAIT_PKT_LEN;
-                charindex = 0;
                 memset(cmdbuffer, 0x00, 4);
             }
             if (strncmp(cmdbuffer, "MAC?", 4) == 0) {
@@ -58,30 +55,16 @@ void processSerial(uint8_t lastchar) {
 
             break;
         case ZBS_RX_WAIT_PKT_LEN:
-            cmdbuffer[charindex] = lastchar;
-            charindex++;
-            if (charindex == 2) {
-                pktlen = (uint8_t)strtoul(cmdbuffer, NULL, 16);
-                pktindex = 0;
-                charindex = 0;
-                RXState = ZBS_RX_WAIT_SEP1;
-            }
-            break;
-        case ZBS_RX_WAIT_SEP1:
+            pktlen = lastchar;
             RXState = ZBS_RX_WAIT_PKT_RX;
+            pktindex = 0;
             break;
         case ZBS_RX_WAIT_PKT_RX:
-            cmdbuffer[charindex] = lastchar;
-            charindex++;
-            if (charindex == 2) {
-                charindex = 0;
-                uint8_t curbyte = (uint8_t)strtoul(cmdbuffer, NULL, 16);
-                packetp[pktindex] = curbyte;
-                pktindex++;
-                if (pktindex == pktlen) {
-                    commsTxUnencrypted(packetp, pktlen);
-                    RXState = ZBS_RX_WAIT_HEADER;
-                }
+            packetp[pktindex] = lastchar;
+            pktindex++;
+            if (pktindex == pktlen) {
+                commsTxUnencrypted(packetp, pktlen);
+                RXState = ZBS_RX_WAIT_HEADER;
             }
             break;
     }
@@ -113,8 +96,8 @@ void main(void) {
 
     // init the "random" number generation unit
     rndSeed(mSelfMac[0] ^ (uint8_t)timerGetLowBits(), mSelfMac[1]);
-    //wdtSetResetVal(0xFE0DCF); // watchdog doesn't seem to want to be petted, keeps barking.
-    //wdtOn();
+    wdtSetResetVal(0xFE0DCF);
+    wdtOn();
     if (1) {
         radioSetChannel(RADIO_FIRST_CHANNEL);
         radioSetTxPower(10);
@@ -124,18 +107,18 @@ void main(void) {
         while (1) {
             int8_t ret = commsRxUnencrypted(mRxBuf);
             if (ret > 1) {
-                pr("PKT>%02X|", ret);
+                pr("PKT>");
+                uartTx(ret);
                 for (uint8_t len = 0; len < ret; len++) {
-                    pr("%02X", mRxBuf[len]);
+                    uartTx(mRxBuf[len]);
                 }
                 // pr("|%02X%02X", mLastRSSI, mLastLqi); // reading RSSI/LQI seems broken... Needs to be fixed
-                pr("<END\n");
             }
 
             if (uartBytesAvail()) {
                 processSerial(uartRx());
             }
-            //wdtPet();
+            wdtSetResetVal(0xFE0DCF);  // watchdog doesn't seem to want to be petted, keeps barking.
         }
     }
 }

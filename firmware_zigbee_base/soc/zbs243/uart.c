@@ -7,8 +7,12 @@ void uartInit(void) {
     CLKEN |= 0x20;
 
     // configure
-    UARTBRGH = 0x00;  // config for 115200
-    UARTBRGL = 0x8A;
+    UARTBRGH = 0x00;    // at the speeds we want, this reg is always 0
+    //UARTBRGL = 0x8A;  // 115200
+    UARTBRGL = 69;      // nice. 230400 baud
+    //UARTBRGL = 0x1F;  // 500kbaud, unreliable RX here...
+    //UARTBRGL = 39;      //400kbaud? also unreliable...
+    //UARTBRGL = 49;      // 320kbaud? nope. bummer.
     UARTSTA = 0x12;  // also set the "empty" bit else we wait forever for it to go up
     IEN_UART0 = 1;
 }

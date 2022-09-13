@@ -10,5 +10,7 @@ void setup() {
 }
 
 void loop() {
-    vTaskDelay(100 / portTICK_PERIOD_MS);
+    vTaskDelay(30000 / portTICK_PERIOD_MS);
+    // dump heap size
+    Serial.println(ESP.getFreeHeap());
 }
