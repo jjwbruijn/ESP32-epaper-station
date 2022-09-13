@@ -102,6 +102,6 @@ void zbsRxTask(void* parameter) {
         if (Serial.available()) {
             Serial1.write(Serial.read());
         }
-        yield();
+        vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 }

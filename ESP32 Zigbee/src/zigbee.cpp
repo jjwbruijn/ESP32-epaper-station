@@ -83,6 +83,7 @@ bool decrypt(struct ccm_data* ccm_data) {
     mbedtls_ccm_init(&ccm);
     mbedtls_ccm_setkey(&ccm, MBEDTLS_CIPHER_ID_AES, (unsigned char*)preshared_key, 128);
     ret = mbedtls_ccm_auth_decrypt(&ccm, ccm_data->datalen, ccm_data->nonce, 13, ccm_data->hdr, ccm_data->hdrsize, ccm_data->encrypted, ccm_data->data, ccm_data->tag, 4);
+    mbedtls_ccm_free(&ccm);
     if (ret != 0) {
         mbedtls_printf("auth_decrypt testing! returned -0x%04X\r\n", -ret);
         return false;
@@ -96,6 +97,7 @@ bool encrypt(struct ccm_data* ccm_data) {
     mbedtls_ccm_init(&ccm);
     mbedtls_ccm_setkey(&ccm, MBEDTLS_CIPHER_ID_AES, (unsigned char*)preshared_key, 128);
     ret = mbedtls_ccm_encrypt_and_tag(&ccm, ccm_data->datalen, ccm_data->nonce, 13, ccm_data->hdr, ccm_data->hdrsize, ccm_data->data, ccm_data->encrypted, ccm_data->tag, 4);
+    mbedtls_ccm_free(&ccm);
     if (ret != 0) {
         mbedtls_printf("encrypt returned -0x%04X\r\n", -ret);
         return false;
@@ -144,8 +146,8 @@ void decodePacket(void* p, uint8_t len) {
     memcpy(ccm_data.hdr, p, ccm_data.hdrsize);
 
     bool isValid = decrypt(&ccm_data);
-    //Serial.print("output:\n");
-    //dumpHex(ccm_data.data, ccm_data.datalen);
+    // Serial.print("output:\n");
+    // dumpHex(ccm_data.data, ccm_data.datalen);
 
     if (isValid)
         parsePacket(src, ccm_data.data, ccm_data.datalen);
@@ -160,8 +162,8 @@ void encodePacket(uint8_t* dst, uint8_t* data, uint8_t len) {
     if ((dst[0] == 0xFF) && (dst[1] == 0xFF)) {
         // broadcast packet (unimplemented)
     } else {
-        //Serial.printf("DATA=");
-        //dumpHex(data, len);
+        // Serial.printf("DATA=");
+        // dumpHex(data, len);
         uint8_t totallen = sizeof(struct MacFrameNormal) + len + 4 + 4;  //(tag + nonce);
         struct MacFrameNormal hdr;
         memset(&hdr, 0, sizeof(struct MacFrameNormal));
