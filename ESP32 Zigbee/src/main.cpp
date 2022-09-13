@@ -3,6 +3,7 @@
 #include <WifiManager.h>
 
 #include "serial.h"
+#include "pendingdata.h"
 #include "soc/rtc_wdt.h"
 
 void freeHeapTask(void* parameter) {
@@ -12,21 +13,22 @@ void freeHeapTask(void* parameter) {
     }
 }
 
-WiFiManager wm;
 void setup() {
     Serial.begin(115200);
     Serial.print(">\n");
-
+    WiFiManager wm;
     xTaskCreate(freeHeapTask, "print free heap", 10000, NULL, 2, NULL);
     xTaskCreate(zbsRxTask, "zbsRX Process", 10000, NULL, 2, NULL);
-
-    wm.setConfigPortalTimeout(180);
+    xTaskCreate(garbageCollection, "pending-data cleanup", 5000, NULL, 1, NULL);
+    
     wm.setWiFiAutoReconnect(true);
+    wm.setConfigPortalTimeout(180);
     bool res = wm.autoConnect("ESP32ZigbeeBase", "password");  // password protected ap
     if (!res) {
         Serial.println("Failed to connect");
         ESP.restart();
     }
+    wm.setWiFiAutoReconnect(true);
 }
 
 void loop() {
