@@ -1,5 +1,5 @@
 # ESP32-epaper-station
-An E-paper shelf label (electronic shelf label or ESL) base station based on an Electronic Shelf Label and an ESP32. One tag is used as a zigbee radio to send packets to other tags/labels/esl's. It's based on the work of epaper/
+An E-paper shelf label (electronic shelf label or ESL) base station based on an Electronic Shelf Label and an ESP32. One tag is used as a zigbee radio to send packets to other tags/labels/esl's. It's based on the work of epaper/tag heroes listed below
 
 ## Disclaimer
 - By using this software you acknowledge that I am in no way liable if you burn down your PC, set your hair on fire or other potential things that may or may not happen due to the use of this software.
