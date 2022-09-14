@@ -21,12 +21,14 @@ An E-paper shelf label (electronic shelf label or ESL) base station based on an 
 - Shelf labels running the custom firmware (originally version from dmitry)
 
 ### Getting stuff up and running
-- Flash the shelf label/tag with the binary provided in the firmware_zigbee_base directory. Guides to flash label can be found here
+- Flash the shelf label/tag with the binary provided in the firmware_zigbee_base directory. Guides to flash label can be found [here](https://github.com/atc1441/ZBS_Flasher)
+- Make sure to enter a valid mac address on the infopage 0x10 offset (8 bytes) and write it back to the tag
 - Open the ESP32 firmware and edit settings.h, make sure your webserver is filled in correctly.
 - Build the ESP32 firmware and flash to your ESP32 board. I like to use PlatformIO. Whatever works for you!
 - Connect the base-station-ESL to the ESP32 using the designated pins. Defaults are 12/13, this can be changed in serial.cpp
 - Connect the ESL VCC and ground pins to the ESP32. Make sure to hook it up to 3.3v
 - Add the wwwdir folder to your webserver, rename to esl or whatever you've entered in settings.h
+- Write access to the 'img' directory is needed
 - Boot the ESP32 and use WifiManager/config portal to connect the ESP32 to your network   
 
 ## Next steps / errata
@@ -37,8 +39,8 @@ Omg where to start... It's unstable, only happy flow is implemented, there is al
 - Built-in flasher
 - Error handling
 - Web interface
+- OTA updates
 - Improved PHP side - database for tags?
-- Associate message to the webserver
 - Remove crypto from both custom firmware/ESP32 should improve speed
 - Use the display of an ESL as a base-station status screen
 - Wifi stability
