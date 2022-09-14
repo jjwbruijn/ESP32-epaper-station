@@ -25,7 +25,7 @@ uint32_t getDataFromHTTP(uint8_t** data, String filename) {
     return ret;
 }
 
-String postCheckinData(String json) {
+String postDataToHTTP(String json) {
     HTTPClient http;
     http.begin(CHECK_IN_URL);
     int httpCode = http.POST(json);

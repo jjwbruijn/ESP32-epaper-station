@@ -9,17 +9,23 @@
 #include "testimage.h"
 #include "zigbee.h"  // <<
 
-void sendAssociate(uint8_t* dst) {
+void sendAssociateReply(uint8_t* dst, String associatereplydata) {
     Serial.printf("Sending associate reply...\n");
     uint8_t* data = (uint8_t*)calloc(sizeof(struct AssocInfo) + 1, 1);
     struct AssocInfo* assoc = (struct AssocInfo*)(data + 1);
     *data = PKT_ASSOC_RESP;
     memset(assoc, 0, sizeof(struct AssocInfo));
-    assoc->checkinDelay = CHECK_IN_DELAY;
-    assoc->retryDelay = RETRY_DELAY;
-    assoc->failedCheckinsTillBlank = 2;
-    assoc->failedCheckinsTillDissoc = 0;
     memcpy(assoc->newKey, preshared_key, 16);
+
+        // parse json data from the server
+    StaticJsonDocument<512> assocreply;
+    DeserializationError error = deserializeJson(assocreply, associatereplydata);
+    assoc->checkinDelay = assocreply["checkinDelay"];
+    assoc->retryDelay = assocreply["retryDelay"];
+    assoc->failedCheckinsTillBlank = assocreply["failedCheckinsTillBlank"];
+    assoc->failedCheckinsTillDissoc = assocreply["failedCheckinsTillDissoc"];
+    assoc->rfu[0] = assocreply["rfu"];  // broken
+
     encodePacket(dst, data, sizeof(struct AssocInfo) + 1);
     free(data);
 }
@@ -83,7 +89,7 @@ void sendChunk(uint8_t* dst, struct ChunkReqInfo* chunkreq) {
             pending->len = getDataFromHTTP(&(pending->data), pending->filename);
             Serial.printf(" - got %d bytes from server\n", pending->len);
         }
-        Serial.printf("Serving offset %d from buffer - %d%%\n", chunkreq->offset, (100*chunkreq->offset+1+chunkreq->len)/pending->len);
+        Serial.printf("Serving offset %d from buffer - %d%%\n", chunkreq->offset, (100 * chunkreq->offset + 1 + chunkreq->len) / pending->len);
         memcpy(chunk->data, &(pending->data[chunkreq->offset]), chunkreq->len);
     }
     encodePacket(dst, data, sizeof(struct ChunkInfo) + chunkreq->len + 1);
@@ -99,6 +105,7 @@ void processCheckin(uint8_t* src, struct CheckinInfo* ci) {
     StaticJsonDocument<1200> checkin;
     char sbuffer[32];
     sprintf(sbuffer, "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X", src[7], src[6], src[5], src[4], src[3], src[2], src[1], src[0]);
+    checkin["type"]="CHECK_IN";
     checkin["src"] = sbuffer;
     JsonObject state = checkin.createNestedObject("state");
     state["batteryMv"] = ci->state.batteryMv;
@@ -106,13 +113,13 @@ void processCheckin(uint8_t* src, struct CheckinInfo* ci) {
     state["swVer"] = ci->state.swVer;
     checkin["lastPacketLQI"] = ci->lastPacketLQI;
     checkin["lastPacketRSSI"] = ci->lastPacketRSSI;
-    checkin["rfu"] = ci->rfu;
+    checkin["rfu"] = ci->rfu; // broken / to-do
     checkin["temperature"] = ci->temperature;
     String json;
     serializeJson(checkin, json);
 
     // send check-in data from the server, get pending data back
-    String pendingdata = postCheckinData(json);
+    String pendingdata = postDataToHTTP(json);
 
     // prepare to send pending data back to the tag
     sendPending(src, pendingdata);
@@ -120,7 +127,33 @@ void processCheckin(uint8_t* src, struct CheckinInfo* ci) {
 
 void processAssociateReq(uint8_t* src, struct TagInfo* taginfo) {
     Serial.printf("Tag %dx%d (%dx%dmm)\n", taginfo->screenPixWidth, taginfo->screenPixHeight, taginfo->screenMmWidth, taginfo->screenMmHeight);
-    sendAssociate(src);
+
+    // make json data from check-in data from the tag
+    char buffer[1200];
+    StaticJsonDocument<1200> assocreq;
+    char sbuffer[32];
+    sprintf(sbuffer, "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X", src[7], src[6], src[5], src[4], src[3], src[2], src[1], src[0]);
+    assocreq["type"] = "ASSOCREQ";
+    assocreq["src"] = sbuffer;
+    assocreq["protover"] = taginfo->protoVer;
+    JsonObject state = assocreq.createNestedObject("state");
+    state["batteryMv"] = taginfo->state.batteryMv;
+    state["hwType"] = taginfo->state.hwType;
+    state["swVer"] = taginfo->state.swVer;
+    assocreq["screenPixWidth"] = taginfo->screenPixWidth;
+    assocreq["screenPixHeight"] = taginfo->screenPixHeight;
+    assocreq["screenMmWidth"] = taginfo->screenMmWidth;
+    assocreq["screenMmHeight"] = taginfo->screenMmHeight;
+    assocreq["compressionsSupported"] = taginfo->compressionsSupported;
+    assocreq["maxWaitMsec"] = taginfo->maxWaitMsec;
+    assocreq["screenType"] = taginfo->screenType;
+    assocreq["rfu"] = taginfo->rfu;  // yeah this is broken
+    String json;
+    serializeJson(assocreq, json);
+
+    // send check-in data from the server, get pending data back
+    String assocreplydata = postDataToHTTP(json);
+    sendAssociateReply(src, assocreplydata);
 }
 
 void processChunkReq(uint8_t* src, struct ChunkReqInfo* chunkreq) {
