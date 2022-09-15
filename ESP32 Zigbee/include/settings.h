@@ -1,9 +1,25 @@
 #include <Arduino.h>
 
-#define PENDING_TIMEOUT 120
+//#define NETWORK_MODE        // comment me in to enable network-mode. I'm ready to go in, coach, just give me a chance!
+
+#ifndef NETWORK_MODE
+    #define STANDALONE_MODE
+#endif
+
+#ifdef NETWORK_MODE
 #define WEBSERVER_PATH "http://your-webserver/esl/"
 #define CHECK_IN_URL "http://your-webserver/esl/check-in.php"
+#endif
 
+#ifdef STANDALONE_MODE
+    #define CHECK_IN_DELAY 900000
+    #define RETRY_DELAY 1000
+    #define FAILED_TILL_BLANK 2
+    #define FAILED_TILL_REASSOCIATE 1
+#endif
+
+// this determines how long images will be cached;
+#define PENDING_TIMEOUT 120
 
 
 // flasher options

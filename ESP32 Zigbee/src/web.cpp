@@ -81,16 +81,6 @@ void init_web() {
     Serial.print("Connected! IP address: ");
     Serial.println(WiFi.localIP());
 
-    // Make accessible via http://esl.local using mDNS responder
-    if (!MDNS.begin("ESL")) {
-        Serial.println("Error setting up mDNS responder!");
-        while (1) {
-            delay(1000);
-        }
-    }
-    Serial.println("mDNS responder started");
-    MDNS.addService("http", "tcp", 80);
-
     server.addHandler(new SPIFFSEditor(LittleFS, http_username, http_password));
 
     server.on("/heap", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -106,8 +96,8 @@ void init_web() {
     server.serveStatic("/", LittleFS, "/").setDefaultFile("index.htm");
 
     server.onNotFound([](AsyncWebServerRequest *request) {
-        if (request->url() == "/" || request->url() == "index.htm") {  // not uploaded the index.htm till now so notify the user about it
-            request->send(200, "text/html", "please use <a href=\"/edit\">/edit</a> with login defined in web.cpp to uplaod the supplied index.htm to get full useage");
+        if (request->url() == "/" || request->url() == "index.htm") { 
+            request->send(200, "text/html", "-");
             return;
         }
         Serial.printf("NOT_FOUND: ");

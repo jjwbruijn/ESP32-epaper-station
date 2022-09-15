@@ -5,7 +5,7 @@
 #include "http.h"
 #include "settings.h"
 
-
+#ifdef NETWORK_MODE
 uint32_t getDataFromHTTP(uint8_t** data, String filename) {
     HTTPClient http;
     uint16_t ret = 0;
@@ -36,3 +36,4 @@ String postDataToHTTP(String json) {
     http.end();  // Free the resources
     return ret;
 }
+#endif
