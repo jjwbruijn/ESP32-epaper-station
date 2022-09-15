@@ -9,7 +9,8 @@
 #include <WiFi.h>
 #include <WiFiManager.h>  // https://github.com/tzapu/WiFiManager/tree/feature_asyncwebserver
 
-#include "SPIFFS.h"
+#include <LittleFS.h>
+
 #include "settings.h"
 
 extern uint8_t data_to_send[];
@@ -21,7 +22,7 @@ AsyncWebServer server(80);
 void WriteBMP(const char *filename, uint8_t *pData, int width, int height, int bpp) {
     int lsize = 0, i, iHeaderSize, iBodySize;
     uint8_t pBuf[128];  // holds BMP header
-    File file_out = SPIFFS.open(filename, "wb");
+    File file_out = LittleFS.open(filename, "wb");
 
     lsize = (lsize + 3) & 0xfffc;  // DWORD aligned
     iHeaderSize = 54;
@@ -68,7 +69,7 @@ void WriteBMP(const char *filename, uint8_t *pData, int width, int height, int b
 } /* WriteBMP() */
 
 void init_web() {
-    SPIFFS.begin(true);
+    LittleFS.begin(true);
     WiFi.mode(WIFI_STA);
     WiFiManager wm;
     bool res;
@@ -90,7 +91,7 @@ void init_web() {
     Serial.println("mDNS responder started");
     MDNS.addService("http", "tcp", 80);
 
-    server.addHandler(new SPIFFSEditor(SPIFFS, http_username, http_password));
+    server.addHandler(new SPIFFSEditor(LittleFS, http_username, http_password));
 
     server.on("/heap", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(200, "text/plain", String(ESP.getFreeHeap()));
@@ -102,7 +103,7 @@ void init_web() {
         ESP.restart();
     });
 
-    server.serveStatic("/", SPIFFS, "/").setDefaultFile("index.htm");
+    server.serveStatic("/", LittleFS, "/").setDefaultFile("index.htm");
 
     server.onNotFound([](AsyncWebServerRequest *request) {
         if (request->url() == "/" || request->url() == "index.htm") {  // not uploaded the index.htm till now so notify the user about it

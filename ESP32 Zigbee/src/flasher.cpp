@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-#include "SPIFFS.h"
+#include <LittleFS.h>
 #include "settings.h"
 #include "zbs_interface.h"
 #include "zigbee.h"
@@ -29,7 +29,7 @@ uint8_t *flashbuffer = nullptr;
 
 String lookupFirmwareFile(uint16_t &version) {
     String filename;
-    File root = SPIFFS.open("/");
+    File root = LittleFS.open("/");
     File file = root.openNextFile();
     while (file) {
         if (strncmp(file.name(), "zigbeebase", 10) == 0) {
@@ -167,7 +167,7 @@ void performDeviceFlash() {
     } 
 
     uint16_t version = 0;
-    File file = SPIFFS.open(lookupFirmwareFile(version));
+    File file = LittleFS.open(lookupFirmwareFile(version));
     if (!file) {
         return;
     } else {

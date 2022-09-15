@@ -8,6 +8,7 @@
 #include "settings.h"
 #include "testimage.h"
 #include "zigbee.h"  // <<
+#include <LittleFS.h>
 
 void sendAssociateReply(uint8_t* dst, String associatereplydata) {
     Serial.printf("Sending associate reply...\n");
