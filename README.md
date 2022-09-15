@@ -17,7 +17,7 @@ An E-paper shelf label (electronic shelf label or ESL) base station based on an 
 - ESP32 (whatever board, a minimum of two GPIO pins for a serial connection)
 - Solum ZBS243 SOC-based ESL (I tried and built it for the 2.9"/1.54" board). The EPD panel can be disconnected or removed
     - [ZBS_Flasher](https://github.com/atc1441/ZBS_Flasher)- ESP32/ESP8266/Arduino Nano based flasher for the ESL. We'll try to integrate this into the first ESP32 in the future
-- Webserver running PHP
+- Optional: Webserver running PHP
 - Shelf labels running the custom firmware (originally version from dmitry)
 
 ### Getting stuff up and running
@@ -25,21 +25,25 @@ An E-paper shelf label (electronic shelf label or ESL) base station based on an 
 - Make sure to enter a valid mac address on the infopage 0x10 offset (8 bytes) and write it back to the tag
 - Open the ESP32 firmware and edit settings.h, make sure your webserver is filled in correctly.
 - Build the ESP32 firmware and flash to your ESP32 board. I like to use PlatformIO. Whatever works for you!
-- Connect the base-station-ESL to the ESP32 using the designated pins. Defaults are 12/13, this can be changed in serial.cpp
+- Connect the base-station-ESL to the ESP32 using the designated pins. Pin configuration can be changed in serial.cpp!
 - Connect the ESL VCC and ground pins to the ESP32. Make sure to hook it up to 3.3v
+[optional]
 - Add the wwwdir folder to your webserver, rename to esl or whatever you've entered in settings.h
 - Write access to the 'img' directory is needed
 - Boot the ESP32 and use WifiManager/config portal to connect the ESP32 to your network   
 
 ## Next steps / errata
-Omg where to start... It's unstable, only happy flow is implemented, there is almost 0 error handling. These tags aren't meant to be used as base stations, the radio interface may be unstable and can stop/drop out. Your milage may vary, and is very much dependent on network congestion and RF environment
+Omg where to start... It's unstable, only happy flow is implemented, there is almost 0 error handling. These tags aren't meant to be used as base stations, the radio interface may be unstable and can stop/drop out. Your milage may vary, and is very much dependent on network congestion and RF environment.
+
+When connected to a valid board, it'll automatically flash it and set the correct mac address. Very little to do!
+
+Connect to it's ip adres using http://<ip?>/edit and add image files to display there!
 
 ### Todo
 - Improve radio latency/speed
 - Built-in flasher
 - Error handling
 - Web interface
-- OTA updates
 - Improved PHP side - database for tags?
 - Remove crypto from both custom firmware/ESP32 should improve speed
 - Use the display of an ESL as a base-station status screen
