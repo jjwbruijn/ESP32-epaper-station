@@ -25,8 +25,8 @@ uint32_t preshared_key[4] = PROTO_PRESHARED_KEY;
 uint8_t sequence = 0;
 uint8_t devicemac[8] = {0};
 
-void dumpHex(void* p, uint8_t len) {
-    for (uint8_t c = 0; c < len; c++) {
+void dumpHex(void* p, uint16_t len) {
+    for (uint16_t c = 0; c < len; c++) {
         if (c % 16 == 0) {
             Serial.printf("\n%02X: ", c);
         }

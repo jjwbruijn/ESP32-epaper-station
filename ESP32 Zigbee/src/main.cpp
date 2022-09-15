@@ -2,9 +2,11 @@
 #include <WiFi.h>
 #include <WifiManager.h>
 
-#include "serial.h"
+#include "flasher.h"
 #include "pendingdata.h"
+#include "serial.h"
 #include "soc/rtc_wdt.h"
+#include "web.h"
 
 void freeHeapTask(void* parameter) {
     while (1) {
@@ -16,11 +18,12 @@ void freeHeapTask(void* parameter) {
 void setup() {
     Serial.begin(115200);
     Serial.print(">\n");
-    WiFiManager wm;
+    init_web();
+    // WiFiManager wm;
     xTaskCreate(freeHeapTask, "print free heap", 10000, NULL, 2, NULL);
     xTaskCreate(zbsRxTask, "zbsRX Process", 10000, NULL, 2, NULL);
     xTaskCreate(garbageCollection, "pending-data cleanup", 5000, NULL, 1, NULL);
-    
+    /*
     wm.setWiFiAutoReconnect(true);
     wm.setConfigPortalTimeout(180);
     bool res = wm.autoConnect("ESP32ZigbeeBase", "password");  // password protected ap
@@ -29,6 +32,7 @@ void setup() {
         ESP.restart();
     }
     wm.setWiFiAutoReconnect(true);
+    */
 }
 
 void loop() {

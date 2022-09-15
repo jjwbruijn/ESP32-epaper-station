@@ -53,3 +53,4 @@ struct MacFrameBcast {
 
 void decodePacket(void* p, uint8_t len);
 void encodePacket(uint8_t* dst, uint8_t* data, uint8_t len);
+void dumpHex(void* p, uint16_t len);
