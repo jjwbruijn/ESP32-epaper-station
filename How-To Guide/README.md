@@ -26,4 +26,4 @@ You'll need
 
 
 <img src="antenna.jpg">
-The zigbee antenna is indicated in red here. It sits to the side of the case, and is just a short strip of metal. If you can avoid placing the ESP32 directly over the battery, I'd strongly suggest you do so. Putting a wifi transmitter near the zigbee radio may cause unintended behaviour. At the very least it'll desensitize the front-end, leading to poor connections and packet loss.
+The zigbee antenna is indicated in red here. It sits to the side of the case, and is just a short strip of metal. If you can avoid placing the ESP32 directly over the battery, I'd strongly suggest you do so. Putting a wifi transmitter near the zigbee radio may cause poor performance. At the very least a wifi radio in close proximity will desensitize the front-end somewhat, leading to poor connections and packet loss, even if it's not using the same channel.
