@@ -15,19 +15,15 @@ You'll need
 
 <img src="pinout.jpg">
 - All these pins (except for the Test/P1.0 pin) need to be hooked up to an ESP32. Make notes while you make the connections, so you can later check your work.
-
-- Take your solder, use the tip or your iron and keep small bead of solder in place. If you put half a mm in the bead of solder, you'll easily burn of the enamel, and that allows you to solder it to pads or anything like that
+- Use your soldering tool and a little bit of solder to thermally strip the enamel of the copper wire.
 
 <img src="soldered1.jpg">
 
-- Be careful with the PCB: it's quite literally built down to a price, it's very lightweight and pads can come off sorta easily. That'd be bad.
+- Be careful with the PCB: it's quite literally built down to a price, it's very thin/lightweight and pads can come off sorta easily. That'd be bad.
 
 - Now guide the small copper wires though the hole in the battery bay, and guide the wires all the way to the top side and maybe close to an ESP32.
-- Keep track of what you hook-up to what pads.
+- Keep track of what you hook-up to what pads, and edit the pinout in settings.h
 
 
 <img src="antenna.jpg">
-The zigbee antenna is indicated in red here. It sits to the side. If you can avoid placing the ESP32 directly over the battery, I'd strongly suggest you do so. Putting a wifi transmitter near the zigbee radio may cause unintended behaviour. At the very least it'll desensitize the front-end, leading to poor connections, packet loss and other issues.
-
-<img src="assembled">
-This is what it looks like when it is done!
+The zigbee antenna is indicated in red here. It sits to the side of the case, and is just a short strip of metal. If you can avoid placing the ESP32 directly over the battery, I'd strongly suggest you do so. Putting a wifi transmitter near the zigbee radio may cause unintended behaviour. At the very least it'll desensitize the front-end, leading to poor connections and packet loss.
