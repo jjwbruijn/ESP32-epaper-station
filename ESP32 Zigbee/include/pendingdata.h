@@ -1,11 +1,12 @@
 #include <Arduino.h>
 #include <vector>
 #pragma pack(push, 1)
+#pragma once
 
 class pendingdata {
    public:
     String filename;
-    uint8_t dst[8];
+    //uint8_t dst[8];
     uint64_t ver;
     String md5;
     uint16_t timeout;

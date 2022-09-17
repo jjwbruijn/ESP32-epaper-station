@@ -7,6 +7,7 @@
 #include "http.h"  // <<
 #include "pendingdata.h"
 #include "settings.h"
+#include "standalone_filehandling.h"
 #include "testimage.h"
 #include "time.h"
 #include "zigbee.h"  // <<
@@ -118,26 +119,6 @@ void processChunkReq(uint8_t* src, struct ChunkReqInfo* chunkreq) {
 
 #ifdef STANDALONE_MODE
 
-File getFileForMac(uint8_t* dst) {
-    char buffer[32];
-    memset(buffer, 0, 32);
-    sprintf(buffer, "/%02X%02X%02X%02X%02X%02X%02X%02X.bmp", dst[7], dst[6], dst[5], dst[4], dst[3], dst[2], dst[1], dst[0]);
-    File file = LittleFS.open(buffer);
-    return file;
-}
-
-void downloadFileToBuffer(pendingdata* pending) {
-    pending->data = (uint8_t*)calloc(pending->len, 1);
-    File file = LittleFS.open(pending->filename);
-    pending->data = (uint8_t*)calloc(file.size(), 1);
-    uint32_t index = 0;
-    while (file.available()) {
-        pending->data[index] = file.read();
-        index++;
-        if ((index % 256) == 0) portYIELD();
-    }
-}
-
 void sendAssociateReply(uint8_t* dst) {
     Serial.printf("Sending associate reply...\n");
     uint8_t* data = (uint8_t*)calloc(sizeof(struct AssocInfo) + 1, 1);
@@ -152,41 +133,56 @@ void sendAssociateReply(uint8_t* dst) {
     encodePacket(dst, data, sizeof(struct AssocInfo) + 1);
     free(data);
 }
-void sendPending(uint8_t* dst) {
+
+void sendPending(uint8_t* dst, struct CheckinInfo* ci) {
     Serial.printf("Sending pending...\n");
     uint8_t* data = (uint8_t*)calloc(sizeof(struct PendingInfo) + 1, 1);
     struct PendingInfo* pi = (struct PendingInfo*)(data + 1);
     *data = PKT_CHECKOUT;
     memset(pi, 0, sizeof(struct PendingInfo));
 
-    File file = getFileForMac(dst);
-    if (!file) {
-        pi->imgUpdateVer = 0;
-        pi->imgUpdateSize = 0;
-    } else {
-        pi->imgUpdateVer = (((uint64_t)(file.getLastWrite())) << 32) | ((uint64_t)(file.getLastWrite()));
-        pi->imgUpdateSize = file.size();
-    }
-    file.close();
+    // get info about image; timestamp/ver and size
+    uint64_t ver;
+    uint32_t len;
+    String imageFileName = getImageData(ver, len, dst);
+    pi->imgUpdateVer = ver;
+    pi->imgUpdateSize = len;
+
+    // get info about a potentially available firmware update
+    String updateFileName = getUpdateData(ver, len, ci->state.hwType);
+    pi->osUpdateVer = ver;
+    pi->osUpdateSize = len;
+
+    // send packet out
     encodePacket(dst, data, sizeof(struct PendingInfo) + 1);
 
     // save information about pending data to array
-    pendingdata* pendinginfo = pendingdata::findByVer(pi->imgUpdateVer);
-    if (pendinginfo == nullptr) {
-        pendinginfo = new pendingdata;
-        memcpy(pendinginfo->dst, dst, 8);
-        pendinginfo->timeout = PENDING_TIMEOUT;
-        char buffer[32];
-        memset(buffer, 0, 32);
-        sprintf(buffer, "/%02X%02X%02X%02X%02X%02X%02X%02X.bmp", dst[7], dst[6], dst[5], dst[4], dst[3], dst[2], dst[1], dst[0]);
-        Serial.println(buffer);
-        pendinginfo->filename = buffer;
-        pendinginfo->ver = pi->imgUpdateVer;
-        pendinginfo->len = pi->imgUpdateSize;
-        pendinginfo->data = nullptr;
-        pendingfiles.push_back(pendinginfo);
-    } else {
-        pendinginfo->timeout = PENDING_TIMEOUT;
+    if (pi->imgUpdateSize) {
+        pendingdata* pendinginfo = pendingdata::findByVer(pi->imgUpdateVer);
+        if (pendinginfo == nullptr) {
+            pendinginfo = new pendingdata;
+            pendinginfo->filename = imageFileName;
+            pendinginfo->ver = pi->imgUpdateVer;
+            pendinginfo->len = pi->imgUpdateSize;
+            pendinginfo->data = nullptr;
+            pendingfiles.push_back(pendinginfo);
+        } else {
+            pendinginfo->timeout = PENDING_TIMEOUT;
+        }
+    }
+
+    if (pi->osUpdateSize) {
+        pendingdata* pendinginfo = pendingdata::findByVer(pi->osUpdateVer);
+        if (pendinginfo == nullptr) {
+            pendinginfo = new pendingdata;
+            pendinginfo->filename = updateFileName;
+            pendinginfo->ver = pi->osUpdateVer;
+            pendinginfo->len = pi->osUpdateSize;
+            pendinginfo->data = nullptr;
+            pendingfiles.push_back(pendinginfo);
+        } else {
+            pendinginfo->timeout = PENDING_TIMEOUT;
+        }
     }
     free(data);
 }
@@ -209,13 +205,12 @@ void sendChunk(uint8_t* dst, struct ChunkReqInfo* chunkreq) {
             downloadFileToBuffer(pending);
             Serial.printf(" - got %d bytes from server\n", pending->len);
         }
-        Serial.printf("Serving offset %d from buffer - %d%%\n", chunkreq->offset, (100 * chunkreq->offset + 1 + chunkreq->len) / pending->len);
+        Serial.printf("Serving offset %d with len %d from buffer - %d%%\n", chunkreq->offset, chunkreq->len, (100 * chunkreq->offset + 1 + chunkreq->len) / pending->len);
         memcpy(chunk->data, &(pending->data[chunkreq->offset]), chunkreq->len);
     }
     encodePacket(dst, data, sizeof(struct ChunkInfo) + chunkreq->len + 1);
     free(data);
 }
-
 
 void processChunkReq(uint8_t* src, struct ChunkReqInfo* chunkreq) {
     sendChunk(src, chunkreq);
@@ -260,7 +255,7 @@ void processCheckin(uint8_t* src, struct CheckinInfo* ci) {
     checkin["lastSeen"] = getTime();
     serializeJson(checkin, file);
     file.close();
-    sendPending(src);
+    sendPending(src, ci);
 #endif
 
 #ifdef NETWORK_MODE
@@ -293,9 +288,9 @@ void processAssociateReq(uint8_t* src, struct TagInfo* taginfo) {
 
     // make json data from check-in data from the tag
     sprintf(sbuffer, "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X", src[7], src[6], src[5], src[4], src[3], src[2], src[1], src[0]);
-    #ifdef NETWORK_MODE
+#ifdef NETWORK_MODE
     assocreq["type"] = "ASSOCREQ";
-    #endif
+#endif
     assocreq["src"] = sbuffer;
     assocreq["protover"] = taginfo->protoVer;
     JsonObject state = assocreq.createNestedObject("state");
@@ -327,9 +322,6 @@ void processAssociateReq(uint8_t* src, struct TagInfo* taginfo) {
     String assocreplydata = postDataToHTTP(json);
     sendAssociateReply(src, assocreplydata);
 #endif
-
-
-
 }
 
 void parsePacket(uint8_t* src, void* data, uint8_t len) {

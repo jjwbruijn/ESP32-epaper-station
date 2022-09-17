@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#pragma pack(push, 1);
+#pragma pack(push, 1)
 
 #define PKT_ASSOC_REQ			(0xF0)
 #define PKT_ASSOC_RESP			(0xF1)
