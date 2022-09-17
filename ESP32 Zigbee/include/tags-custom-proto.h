@@ -74,7 +74,7 @@ struct ChunkInfo {
 void parsePacket(const uint8_t* src, const uint8_t* data, const uint8_t len);
 
 void sendAssociateReply(const uint8_t* dst, String associatereplydata);
-void sendPending(const uint8_t* dst, String pendingdatastr);
+void sendPending(const uint8_t *dst, const struct CheckinInfo *ci);
 void sendChunk(const uint8_t* dst, const struct ChunkReqInfo* chunkreq);
 void processCheckin(const uint8_t* src, const struct CheckinInfo* ci);
 void processAssociateReq(const uint8_t* src, const struct TagInfo* taginfo);

@@ -146,19 +146,6 @@ File getFileForMac(const uint8_t *dst) {
   return file;
 }
 
-void downloadFileToBuffer(pendingdata *pending) {
-  pending->data = (uint8_t *)calloc(pending->len, 1);
-  File file = LittleFS.open(pending->filename);
-  pending->data = (uint8_t *)calloc(file.size(), 1);
-  uint32_t index = 0;
-  while (file.available()) {
-    pending->data[index] = file.read();
-    index++;
-    if ((index % 256) == 0)
-      portYIELD();
-  }
-}
-
 void sendAssociateReply(const uint8_t *dst) {
   Serial.printf("Sending associate reply...\n");
   uint8_t *data = (uint8_t *)calloc(sizeof(struct AssocInfo) + 1, 1);
@@ -174,7 +161,7 @@ void sendAssociateReply(const uint8_t *dst) {
   free(data);
 }
 
-void sendPending(const uint8_t *dst, struct CheckinInfo *ci) {
+void sendPending(const uint8_t *dst, const struct CheckinInfo *ci) {
   Serial.printf("Sending pending...\n");
   uint8_t *data = (uint8_t *)calloc(sizeof(struct PendingInfo) + 1, 1);
   struct PendingInfo *pi = (struct PendingInfo *)(data + 1);

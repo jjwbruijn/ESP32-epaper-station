@@ -58,7 +58,7 @@ File getFileForMac(uint8_t* dst) {
     return file;
 }
 
-String getUpdateData(uint64_t& ver, uint32_t& len, uint8_t hwType) {
+String getUpdateData(uint64_t& ver, uint32_t& len, const uint8_t hwType) {
     char buffer[16];
     sprintf(buffer, "/UPDT%04X.BIN", hwType);
     if (LittleFS.exists(buffer)) {
@@ -77,7 +77,7 @@ String getUpdateData(uint64_t& ver, uint32_t& len, uint8_t hwType) {
     }
 }
 
-String getImageData(uint64_t& ver, uint32_t& len, uint8_t* dst) {
+String getImageData(uint64_t& ver, uint32_t& len, const uint8_t* dst) {
     char buffer[32];
     memset(buffer, 0, 32);
     sprintf(buffer, "/%02X%02X%02X%02X%02X%02X%02X%02X.bmp", dst[7], dst[6], dst[5], dst[4], dst[3], dst[2], dst[1], dst[0]);
