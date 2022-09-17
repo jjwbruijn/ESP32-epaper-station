@@ -8,7 +8,19 @@
 #include "pendingdata.h"
 #include "settings.h"
 #include "testimage.h"
+#include "time.h"
 #include "zigbee.h"  // <<
+
+unsigned long getTime() {
+    time_t now;
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+        Serial.println("Failed to obtain time");
+        return (0);
+    }
+    time(&now);
+    return now;
+}
 
 #ifdef NETWORK_MODE
 void sendAssociateReply(uint8_t* dst, String associatereplydata) {
@@ -96,66 +108,6 @@ void sendChunk(uint8_t* dst, struct ChunkReqInfo* chunkreq) {
     }
     encodePacket(dst, data, sizeof(struct ChunkInfo) + chunkreq->len + 1);
     free(data);
-}
-
-void processCheckin(uint8_t* src, struct CheckinInfo* ci) {
-    // process check-in data
-    Serial.printf("Check-in: Battery = %d\n", ci->state.batteryMv);
-
-    // make json data from check-in data from the tag
-    char buffer[1200];
-    StaticJsonDocument<1200> checkin;
-    char sbuffer[32];
-    sprintf(sbuffer, "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X", src[7], src[6], src[5], src[4], src[3], src[2], src[1], src[0]);
-    checkin["type"] = "CHECK_IN";
-    checkin["src"] = sbuffer;
-    JsonObject state = checkin.createNestedObject("state");
-    state["batteryMv"] = ci->state.batteryMv;
-    state["hwType"] = ci->state.hwType;
-    state["swVer"] = ci->state.swVer;
-    checkin["lastPacketLQI"] = ci->lastPacketLQI;
-    checkin["lastPacketRSSI"] = ci->lastPacketRSSI;
-    checkin["rfu"] = ci->rfu;  // broken / to-do
-    checkin["temperature"] = ci->temperature;
-    String json;
-    serializeJson(checkin, json);
-
-    // send check-in data from the server, get pending data back
-    String pendingdata = postDataToHTTP(json);
-
-    // prepare to send pending data back to the tag
-    sendPending(src, pendingdata);
-}
-
-void processAssociateReq(uint8_t* src, struct TagInfo* taginfo) {
-    Serial.printf("Tag %dx%d (%dx%dmm)\n", taginfo->screenPixWidth, taginfo->screenPixHeight, taginfo->screenMmWidth, taginfo->screenMmHeight);
-
-    // make json data from check-in data from the tag
-    char buffer[1200];
-    StaticJsonDocument<1200> assocreq;
-    char sbuffer[32];
-    sprintf(sbuffer, "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X", src[7], src[6], src[5], src[4], src[3], src[2], src[1], src[0]);
-    assocreq["type"] = "ASSOCREQ";
-    assocreq["src"] = sbuffer;
-    assocreq["protover"] = taginfo->protoVer;
-    JsonObject state = assocreq.createNestedObject("state");
-    state["batteryMv"] = taginfo->state.batteryMv;
-    state["hwType"] = taginfo->state.hwType;
-    state["swVer"] = taginfo->state.swVer;
-    assocreq["screenPixWidth"] = taginfo->screenPixWidth;
-    assocreq["screenPixHeight"] = taginfo->screenPixHeight;
-    assocreq["screenMmWidth"] = taginfo->screenMmWidth;
-    assocreq["screenMmHeight"] = taginfo->screenMmHeight;
-    assocreq["compressionsSupported"] = taginfo->compressionsSupported;
-    assocreq["maxWaitMsec"] = taginfo->maxWaitMsec;
-    assocreq["screenType"] = taginfo->screenType;
-    assocreq["rfu"] = taginfo->rfu;  // yeah this is broken
-    String json;
-    serializeJson(assocreq, json);
-
-    // send check-in data from the server, get pending data back
-    String assocreplydata = postDataToHTTP(json);
-    sendAssociateReply(src, assocreplydata);
 }
 
 void processChunkReq(uint8_t* src, struct ChunkReqInfo* chunkreq) {
@@ -264,20 +216,121 @@ void sendChunk(uint8_t* dst, struct ChunkReqInfo* chunkreq) {
     free(data);
 }
 
-void processCheckin(uint8_t* src, struct CheckinInfo* ci) {
-    Serial.printf("Check-in: Battery = %d\n", ci->state.batteryMv);
-    sendPending(src);
-}
-
-void processAssociateReq(uint8_t* src, struct TagInfo* taginfo) {
-    Serial.printf("Tag %dx%d (%dx%dmm)\n", taginfo->screenPixWidth, taginfo->screenPixHeight, taginfo->screenMmWidth, taginfo->screenMmHeight);
-    sendAssociateReply(src);
-}
 
 void processChunkReq(uint8_t* src, struct ChunkReqInfo* chunkreq) {
     sendChunk(src, chunkreq);
 }
 #endif
+
+void processCheckin(uint8_t* src, struct CheckinInfo* ci) {
+    // process check-in data
+    Serial.printf("Check-in: Battery = %d\n", ci->state.batteryMv);
+    char sbuffer[32];
+
+    StaticJsonDocument<1200> checkin;
+
+#ifdef STANDALONE_MODE
+    // Check to see if a state file exists, if it does; load and deserialize
+    sprintf(sbuffer, "/state_%02X%02X%02X%02X%02X%02X%02X%02X.json", src[7], src[6], src[5], src[4], src[3], src[2], src[1], src[0]);
+    File file;
+    if (LittleFS.exists(sbuffer)) {
+        file = LittleFS.open(sbuffer, "w");
+        DeserializationError error = deserializeJson(checkin, file);
+    } else {
+        file = LittleFS.open(sbuffer, "w", true);
+    }
+#endif
+
+    sprintf(sbuffer, "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X", src[7], src[6], src[5], src[4], src[3], src[2], src[1], src[0]);
+#ifdef NETWORK_MODE
+    checkin["type"] = "CHECK_IN";
+#endif
+    checkin["src"] = sbuffer;
+    JsonObject state = checkin.createNestedObject("state");
+    state["batteryMv"] = ci->state.batteryMv;
+    state["hwType"] = ci->state.hwType;
+    state["swVer"] = ci->state.swVer;
+    checkin["lastPacketLQI"] = ci->lastPacketLQI;
+    checkin["lastPacketRSSI"] = ci->lastPacketRSSI;
+    checkin["rfu"] = ci->rfu;  // broken / to-do
+    checkin["temperature"] = ci->temperature;
+
+#ifdef STANDALONE_MODE
+    // Save State file
+    checkin["lastSeen"] = getTime();
+    serializeJson(checkin, file);
+    file.close();
+    sendPending(src);
+#endif
+
+#ifdef NETWORK_MODE
+    String json;
+    serializeJson(checkin, json);
+    // send check-in data from the server, get pending data back
+    String pendingdata = postDataToHTTP(json);
+    // prepare to send pending data back to the tag
+    sendPending(src, pendingdata);
+#endif
+}
+
+void processAssociateReq(uint8_t* src, struct TagInfo* taginfo) {
+    Serial.printf("Tag %dx%d (%dx%dmm)\n", taginfo->screenPixWidth, taginfo->screenPixHeight, taginfo->screenMmWidth, taginfo->screenMmHeight);
+
+    char sbuffer[32];
+
+    StaticJsonDocument<1200> assocreq;
+#ifdef STANDALONE_MODE
+    // Check to see if a state file exists, if it does; load and deserialize
+    sprintf(sbuffer, "/state_%02X%02X%02X%02X%02X%02X%02X%02X.json", src[7], src[6], src[5], src[4], src[3], src[2], src[1], src[0]);
+    File file;
+    if (LittleFS.exists(sbuffer)) {
+        file = LittleFS.open(sbuffer, "w");
+        DeserializationError error = deserializeJson(assocreq, file);
+    } else {
+        file = LittleFS.open(sbuffer, "w", true);
+    }
+#endif
+
+    // make json data from check-in data from the tag
+    sprintf(sbuffer, "%02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X", src[7], src[6], src[5], src[4], src[3], src[2], src[1], src[0]);
+    #ifdef NETWORK_MODE
+    assocreq["type"] = "ASSOCREQ";
+    #endif
+    assocreq["src"] = sbuffer;
+    assocreq["protover"] = taginfo->protoVer;
+    JsonObject state = assocreq.createNestedObject("state");
+    state["batteryMv"] = taginfo->state.batteryMv;
+    state["hwType"] = taginfo->state.hwType;
+    state["swVer"] = taginfo->state.swVer;
+    assocreq["screenPixWidth"] = taginfo->screenPixWidth;
+    assocreq["screenPixHeight"] = taginfo->screenPixHeight;
+    assocreq["screenMmWidth"] = taginfo->screenMmWidth;
+    assocreq["screenMmHeight"] = taginfo->screenMmHeight;
+    assocreq["compressionsSupported"] = taginfo->compressionsSupported;
+    assocreq["maxWaitMsec"] = taginfo->maxWaitMsec;
+    assocreq["screenType"] = taginfo->screenType;
+    assocreq["rfu"] = taginfo->rfu;  // yeah this is broken
+
+#ifdef STANDALONE_MODE
+    // Save State file
+    assocreq["lastSeen"] = getTime();
+    serializeJson(assocreq, file);
+    file.close();
+    sendAssociateReply(src);
+#endif
+
+#ifdef NETWORK_MODE
+    String json;
+    serializeJson(assocreq, json);
+
+    // send check-in data from the server, get pending data back
+    String assocreplydata = postDataToHTTP(json);
+    sendAssociateReply(src, assocreplydata);
+#endif
+
+
+
+}
 
 void parsePacket(uint8_t* src, void* data, uint8_t len) {
     portYIELD();
