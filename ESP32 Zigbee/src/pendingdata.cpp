@@ -29,10 +29,12 @@ pendingdata* pendingdata::findByVer(uint64_t ver) {
 void pendingdata::garbageCollection() {
     for (int16_t c = 0; c < pendingfiles.size(); c++) {
         pendingdata* pending = pendingfiles.at(c);
-        if (pending->timeout)
+        if (pending->timeout) {
             pending->timeout--;
-        if (pending->timeout == 0) {
-            if (pending->data != nullptr) free(pending->data);
+        } else {
+            if (pending->data != nullptr) {
+                free(pending->data);
+            }
             pending->data = nullptr;
             delete pending;
             pendingfiles.erase(pendingfiles.begin() + c);
