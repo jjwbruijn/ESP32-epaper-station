@@ -105,14 +105,14 @@ bool encrypt(struct ccm_data* ccm_data) {
     return true;
 }
 
-void decodePacket(void* p, uint8_t len) {
+void decodePacket(const uint8_t* p, uint8_t len) {
     // dumpHex(p, len);
 
     struct ccm_data ccm_data;
     uint8_t* src = nullptr;
 
     // prep a part of the nonce data, what we know before we determine frame type and source address
-    memcpy(&ccm_data.nonce, p + (len - 4), 4);
+    memcpy(&ccm_data.nonce, (void*)(p + (len - 4)), 4);
     ccm_data.nonce[12] = 0x00;
 
     // decode frame data to determine macframe type
@@ -141,8 +141,8 @@ void decodePacket(void* p, uint8_t len) {
     ccm_data.encrypted = (uint8_t*)calloc(ccm_data.datalen, 1);
     ccm_data.data = (uint8_t*)calloc(ccm_data.datalen, 1);
     ccm_data.hdr = (uint8_t*)calloc(ccm_data.hdrsize, 1);
-    memcpy(ccm_data.encrypted, p + ccm_data.hdrsize, ccm_data.datalen);
-    memcpy(ccm_data.tag, p + len - 8, 4);
+    memcpy(ccm_data.encrypted, (void*)(p + ccm_data.hdrsize), ccm_data.datalen);
+    memcpy(ccm_data.tag, (void*)(p + (len - 8)), 4);
     memcpy(ccm_data.hdr, p, ccm_data.hdrsize);
 
     bool isValid = decrypt(&ccm_data);
@@ -158,7 +158,7 @@ void decodePacket(void* p, uint8_t len) {
     free(ccm_data.hdr);
 }
 
-void encodePacket(uint8_t* dst, uint8_t* data, uint8_t len) {
+void encodePacket(const uint8_t* dst, uint8_t* data, const uint8_t len) {
     if ((dst[0] == 0xFF) && (dst[1] == 0xFF)) {
         // broadcast packet (unimplemented)
     } else {

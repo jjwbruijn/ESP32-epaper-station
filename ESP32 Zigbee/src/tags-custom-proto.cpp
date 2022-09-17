@@ -119,7 +119,27 @@ void processChunkReq(uint8_t* src, struct ChunkReqInfo* chunkreq) {
 
 #ifdef STANDALONE_MODE
 
-void sendAssociateReply(uint8_t* dst) {
+File getFileForMac(const uint8_t* dst) {
+    char buffer[32];
+    memset(buffer, 0, 32);
+    sprintf(buffer, "/%02X%02X%02X%02X%02X%02X%02X%02X.bmp", dst[7], dst[6], dst[5], dst[4], dst[3], dst[2], dst[1], dst[0]);
+    File file = LittleFS.open(buffer);
+    return file;
+}
+
+void downloadFileToBuffer(pendingdata* pending) {
+    pending->data = (uint8_t*)calloc(pending->len, 1);
+    File file = LittleFS.open(pending->filename);
+    pending->data = (uint8_t*)calloc(file.size(), 1);
+    uint32_t index = 0;
+    while (file.available()) {
+        pending->data[index] = file.read();
+        index++;
+        if ((index % 256) == 0) portYIELD();
+    }
+}
+
+void sendAssociateReply(const uint8_t* dst) {
     Serial.printf("Sending associate reply...\n");
     uint8_t* data = (uint8_t*)calloc(sizeof(struct AssocInfo) + 1, 1);
     struct AssocInfo* assoc = (struct AssocInfo*)(data + 1);
@@ -134,7 +154,7 @@ void sendAssociateReply(uint8_t* dst) {
     free(data);
 }
 
-void sendPending(uint8_t* dst, struct CheckinInfo* ci) {
+void sendPending(const uint8_t* dst, struct CheckinInfo* ci) {
     Serial.printf("Sending pending...\n");
     uint8_t* data = (uint8_t*)calloc(sizeof(struct PendingInfo) + 1, 1);
     struct PendingInfo* pi = (struct PendingInfo*)(data + 1);
@@ -187,7 +207,7 @@ void sendPending(uint8_t* dst, struct CheckinInfo* ci) {
     free(data);
 }
 
-void sendChunk(uint8_t* dst, struct ChunkReqInfo* chunkreq) {
+void sendChunk(const uint8_t* dst, const struct ChunkReqInfo* chunkreq) {
     uint8_t* data = (uint8_t*)calloc(sizeof(struct ChunkInfo) + chunkreq->len + 1, 1);
     struct ChunkInfo* chunk = (struct ChunkInfo*)(data + 1);
     *data = PKT_CHUNK_RESP;
@@ -214,12 +234,13 @@ void sendChunk(uint8_t* dst, struct ChunkReqInfo* chunkreq) {
     free(data);
 }
 
-void processChunkReq(uint8_t* src, struct ChunkReqInfo* chunkreq) {
+
+void processChunkReq(const uint8_t* src, const struct ChunkReqInfo* chunkreq) {
     sendChunk(src, chunkreq);
 }
 #endif
 
-void processCheckin(uint8_t* src, struct CheckinInfo* ci) {
+void processCheckin(const uint8_t* src, const struct CheckinInfo* ci) {
     // process check-in data
     Serial.printf("Check-in: Battery = %d\n", ci->state.batteryMv);
     char sbuffer[32];
@@ -270,7 +291,7 @@ void processCheckin(uint8_t* src, struct CheckinInfo* ci) {
 #endif
 }
 
-void processAssociateReq(uint8_t* src, struct TagInfo* taginfo) {
+void processAssociateReq(const uint8_t* src, const struct TagInfo* taginfo) {
     Serial.printf("Tag %dx%d (%dx%dmm)\n", taginfo->screenPixWidth, taginfo->screenPixHeight, taginfo->screenMmWidth, taginfo->screenMmHeight);
 
     char sbuffer[32];
@@ -326,22 +347,22 @@ void processAssociateReq(uint8_t* src, struct TagInfo* taginfo) {
 #endif
 }
 
-void parsePacket(uint8_t* src, void* data, uint8_t len) {
+void parsePacket(const uint8_t* src, const uint8_t* data, const uint8_t len) {
     portYIELD();
-    if (((uint8_t*)data)[0] == PKT_ASSOC_REQ) {
+    if (data[0] == PKT_ASSOC_REQ) {
         Serial.printf("Association request received\n");
-        struct TagInfo* taginfo = (struct TagInfo*)(data + 1);
+        const struct TagInfo* taginfo = (const struct TagInfo*)(data + 1 );
         processAssociateReq(src, taginfo);
-    } else if (((uint8_t*)data)[0] == PKT_ASSOC_RESP) {  // not relevant for a base
+    } else if (data[0] == PKT_ASSOC_RESP) {  // not relevant for a base
         Serial.printf("Association response. Not doing anything with that...\n");
-        struct AssocInfo* associnfo = (struct AssocInfo*)(data + 1);
-    } else if (((uint8_t*)data)[0] == PKT_CHECKIN) {
-        struct CheckinInfo* ci = (struct CheckinInfo*)(data + 1);
+        const struct AssocInfo* associnfo = (const struct AssocInfo*)(data + 1 );
+    } else if (data[0] == PKT_CHECKIN) {
+        const struct CheckinInfo* ci = (const struct CheckinInfo*)(data + 1 );
         processCheckin(src, ci);
-    } else if (((uint8_t*)data)[0] == PKT_CHUNK_REQ) {
-        struct ChunkReqInfo* chunkreq = (struct ChunkReqInfo*)(data + 1);
+    } else if (data[0] == PKT_CHUNK_REQ) {
+        const struct ChunkReqInfo* chunkreq = (const struct ChunkReqInfo*)(data + 1 );
         processChunkReq(src, chunkreq);
     } else {
-        Serial.printf("Received a frame of type %02X, currently unimplemented :<\n", ((uint8_t*)data)[0]);
+        Serial.printf("Received a frame of type %02X, currently unimplemented :<\n", data[0]);
     }
 }
