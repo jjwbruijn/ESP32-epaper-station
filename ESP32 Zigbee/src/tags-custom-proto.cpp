@@ -201,12 +201,14 @@ void sendChunk(uint8_t* dst, struct ChunkReqInfo* chunkreq) {
     } else {
         if (!pending->data) {
             // data not available, get it now.
-            Serial.printf("Data not found, getting from filesystem");
+            Serial.printf("Data not found, getting from filesystem\n");
             downloadFileToBuffer(pending);
-            Serial.printf(" - got %d bytes from server\n", pending->len);
+            Serial.printf(" - got %d bytes from FS\n", pending->len);
         }
         Serial.printf("Serving offset %d with len %d from buffer - %d%%\n", chunkreq->offset, chunkreq->len, (100 * chunkreq->offset + 1 + chunkreq->len) / pending->len);
         memcpy(chunk->data, &(pending->data[chunkreq->offset]), chunkreq->len);
+        Serial.printf("osUpdatePlz=%d\n",chunkreq->osUpdatePlz);
+        if(chunkreq->osUpdatePlz)chunk->osUpdatePlz=1;
     }
     encodePacket(dst, data, sizeof(struct ChunkInfo) + chunkreq->len + 1);
     free(data);
