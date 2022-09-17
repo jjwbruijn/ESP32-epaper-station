@@ -46,6 +46,7 @@ uint16_t getFirmwareVersionOffset(uint8_t hwType) {
         case HW_TYPE_29_INCH_ZBS_026_FRAME_MODE:
         case HW_TYPE_29_INCH_ZBS_025:
         case HW_TYPE_29_INCH_ZBS_025_FRAME_MODE:
+        case HW_TYPE_154_INCH_ZBS_033:
             return HW_TYPE_29_INCH_ZBS_ROM_VER_OFST;
     }
 }
