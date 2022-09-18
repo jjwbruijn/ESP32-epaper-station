@@ -277,12 +277,13 @@ typedef struct ExcludeListS {
 static ExcludeList *excludes = NULL;
 
 static bool matchWild(const char *pattern, const char *testee) {
-    const char *nxPat = NULL, *nxTst = NULL;
+    const char *nxPat = NULL;
+    const char *nxTst = NULL;
 
     while (*testee) {
         if ((*pattern == '?') || (*pattern == *testee)) {
-            pattern++;
-            testee++;
+            ++pattern;
+            ++testee;
             continue;
         }
         if (*pattern == '*') {
@@ -298,7 +299,7 @@ static bool matchWild(const char *pattern, const char *testee) {
         return false;
     }
     while (*pattern == '*') {
-        pattern++;
+        ++pattern;
     }
     return (*pattern == 0);
 }
@@ -397,8 +398,9 @@ SPIFFSEditor::SPIFFSEditor(const String &username, const String &password, const
 bool SPIFFSEditor::canHandle(AsyncWebServerRequest *request) {
     if (request->url().equalsIgnoreCase("/edit")) {
         if (request->method() == HTTP_GET) {
-            if (request->hasParam("list"))
+            if (request->hasParam("list")) {
                 return true;
+            }
             if (request->hasParam("edit")) {
                 request->_tempFile = _fs.open("/" + request->arg("edit"), "r");
                 if (!request->_tempFile) {
@@ -425,19 +427,17 @@ bool SPIFFSEditor::canHandle(AsyncWebServerRequest *request) {
             }
             request->addInterestingHeader("If-Modified-Since");
             return true;
-        } else if (request->method() == HTTP_POST)
+        } else if (request->method() == HTTP_POST || request->method() == HTTP_DELETE || request->method() == HTTP_PUT) {
             return true;
-        else if (request->method() == HTTP_DELETE)
-            return true;
-        else if (request->method() == HTTP_PUT)
-            return true;
+        }
     }
     return false;
 }
 
 void SPIFFSEditor::handleRequest(AsyncWebServerRequest *request) {
-    if (_username.length() && _password.length() && !request->authenticate(_username.c_str(), _password.c_str()))
+    if (_username.length() && _password.length() && !request->authenticate(_username.c_str(), _password.c_str())) {
         return request->requestAuthentication();
+    }
 
     if (request->method() == HTTP_GET) {
         if (request->hasParam("list")) {
@@ -462,7 +462,9 @@ void SPIFFSEditor::handleRequest(AsyncWebServerRequest *request) {
 #endif
                     continue;
                 }
-                if (output != "[") output += ',';
+                if (output != "[") { 
+                    output += ',';
+                }
                 output += "{\"type\":\"";
                 output += "file";
                 output += "\",\"name\":\"";
@@ -499,15 +501,19 @@ void SPIFFSEditor::handleRequest(AsyncWebServerRequest *request) {
         if (request->hasParam("path", true)) {
             _fs.remove("/" + request->getParam("path", true)->value());
             request->send(200, "", "DELETE: " + request->getParam("path", true)->value());
-        } else
+        } else {
             request->send(404);
+        }
     } else if (request->method() == HTTP_POST) {
         String filename = request->getParam("data", true, true)->value();
-        if (filename.c_str()[0] != '/') filename = "/" + filename;
-        if (request->hasParam("data", true, true) && _fs.exists(filename))
+        if (filename.c_str()[0] != '/') {
+            filename = "/" + filename;
+        }
+        if (request->hasParam("data", true, true) && _fs.exists(filename)) {
             request->send(200, "", "UPLOADED: " + request->getParam("data", true, true)->value());
-        else
+        } else {
             request->send(500);
+        } 
     } else if (request->method() == HTTP_PUT) {
         if (request->hasParam("path", true)) {
             String filename = request->getParam("path", true)->value();
@@ -526,8 +532,9 @@ void SPIFFSEditor::handleRequest(AsyncWebServerRequest *request) {
                     request->send(500);
                 }
             }
-        } else
+        } else {
             request->send(400);
+        }
     }
 }
 

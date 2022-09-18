@@ -114,7 +114,7 @@ void zbsRxTask(void* parameter) {
                             vTaskDelay(30000 / portTICK_PERIOD_MS);
                             performDeviceFlash();
                         } else if(!fsversion){
-                            Serial.print("No ZBS/Zigbee FW binary found on SPIFFS, please upload a zigbeebase000X.bin - format binary to enable flashing");
+                            Serial.println("No ZBS/Zigbee FW binary found on SPIFFS, please upload a zigbeebase000X.bin - format binary to enable flashing");
                         } else {
                             Serial.printf("ZBS/Zigbee FW version: %04X\n", version);
                         }
