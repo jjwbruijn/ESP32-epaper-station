@@ -123,28 +123,6 @@ void processChunkReq(uint8_t *src, struct ChunkReqInfo *chunkreq) {
 
 #ifdef STANDALONE_MODE
 
-/// @brief Get the image filename for a tag with the given mac
-/// @param mac MAC address of the tag
-/// @param buffer Buffer to fill with filename
-void getImageFileName(const uint8_t *mac, char *buffer) {
-  sprintf(buffer, "/%02X%02X%02X%02X%02X%02X%02X%02X.bmp", mac[7], mac[6],
-          mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
-}
-
-/// @brief Get the state filename for a tag with the given mac
-/// @param mac MAC address of the tag
-/// @param buffer Buffer to fill with filename
-void getStateFileName(const uint8_t *mac, char *buffer) {
-  sprintf(buffer, "/state_%02X%02X%02X%02X%02X%02X%02X%02X.json", mac[7],
-          mac[6], mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
-}
-
-File getFileForMac(const uint8_t *dst) {
-  char buffer[32];
-  getImageFileName(dst, buffer);
-  File file = LittleFS.open(buffer);
-  return file;
-}
 
 void sendAssociateReply(const uint8_t *dst) {
   Serial.printf("Sending associate reply...\n");

@@ -49,6 +49,7 @@ uint16_t getFirmwareVersionOffset(uint8_t hwType) {
         case HW_TYPE_154_INCH_ZBS_033:
             return HW_TYPE_29_INCH_ZBS_ROM_VER_OFST;
     }
+    return 0;
 }
 
 File getFileForMac(uint8_t* dst) {
@@ -67,7 +68,7 @@ String getUpdateData(uint64_t& ver, uint32_t& len, const uint8_t hwType) {
         file.seek(getFirmwareVersionOffset(hwType));
         uint64_t osVer = 0;
         file.readBytes((char*)(&osVer), 8);
-        ver = osVer & VERSION_SIGNIFICANT_MASK | hwType << 48;
+        ver = osVer & VERSION_SIGNIFICANT_MASK | (uint64_t)hwType << 48;
         len = file.size();
         file.close();
         return String(buffer);
@@ -108,4 +109,21 @@ void downloadFileToBuffer(pendingdata* pending) {
         if ((index % 256) == 0) portYIELD();
     }
     file.close();
+}
+
+void getImageFileName(const uint8_t* mac, char* buffer) {
+    sprintf(buffer, "/%02X%02X%02X%02X%02X%02X%02X%02X.bmp", mac[7], mac[6],
+            mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
+}
+
+void getStateFileName(const uint8_t* mac, char* buffer) {
+    sprintf(buffer, "/state_%02X%02X%02X%02X%02X%02X%02X%02X.json", mac[7],
+            mac[6], mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
+}
+
+File getFileForMac(const uint8_t* dst) {
+    char buffer[32];
+    getImageFileName(dst, buffer);
+    File file = LittleFS.open(buffer);
+    return file;
 }
