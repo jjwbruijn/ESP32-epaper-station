@@ -156,7 +156,7 @@ void sendPending(const uint8_t *dst, const struct CheckinInfo *ci) {
 
     // send packet out
     encodePacket(dst, data, sizeof(struct PendingInfo) + 1);
-    Serial.printf("Sending pending to: %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X -> imgVer %d osVer %d\n", dst[7], dst[6], dst[5], dst[4], dst[3], dst[2], dst[1], dst[0], pi->imgUpdateVer, pi->osUpdateVer);
+    Serial.printf("Sending pending to: %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X -> imgVer %lld osVer %lld\n", dst[7], dst[6], dst[5], dst[4], dst[3], dst[2], dst[1], dst[0], pi->imgUpdateVer, pi->osUpdateVer);
 
     // save information about pending data to array
     if (pi->imgUpdateSize) {
@@ -222,7 +222,7 @@ void processChunkReq(const uint8_t *src, const struct ChunkReqInfo *chunkreq) {
 
 void processCheckin(const uint8_t *src, const struct CheckinInfo *ci) {
     // process check-in data
-    Serial.printf("Check-in from: %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X -> Temp: %d - Battery>=%dmV\n", src[7], src[6], src[5], src[4], src[3], src[2], src[1], src[0], ci->temperature, ci->state.batteryMv);
+    Serial.printf("Check-in from: %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X -> Temp: %d - Battery>=%dmV\n", src[7], src[6], src[5], src[4], src[3], src[2], src[1], src[0], ci->temperature-CHECKIN_TEMP_OFFSET, ci->state.batteryMv);
     DynamicJsonDocument checkin(2048);
     char sbuffer[32];
 #ifdef STANDALONE_MODE
