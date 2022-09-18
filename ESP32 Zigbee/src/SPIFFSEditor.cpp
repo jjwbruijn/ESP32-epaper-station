@@ -450,15 +450,15 @@ void SPIFFSEditor::handleRequest(AsyncWebServerRequest *request) {
             path = String();
             String output = "[";
 #ifdef ESP32
-            File entry = dir.openNextFile();
-            while (entry) {
+            File file = dir.openNextFile();
+            while (file) {
 #else
             while (dir.next()) {
                 fs::File entry = dir.openFile("r");
 #endif
-                if (isExcluded(_fs, entry.name())) {
+                if (isExcluded(_fs, file.name())) {
 #ifdef ESP32
-                    entry = dir.openNextFile();
+                    file = dir.openNextFile();
 #endif
                     continue;
                 }
@@ -468,14 +468,16 @@ void SPIFFSEditor::handleRequest(AsyncWebServerRequest *request) {
                 output += "{\"type\":\"";
                 output += "file";
                 output += "\",\"name\":\"";
-                output += String(entry.name());
+                output += String(file.name());
                 output += "\",\"size\":";
-                output += String(entry.size());
+                output += String(file.size());
+                output += ",\"ver\":";
+                output += (((uint64_t)(file.getLastWrite())) << 32) | ((uint64_t)(file.getLastWrite()));
                 output += "}";
 #ifdef ESP32
-                entry = dir.openNextFile();
+                file = dir.openNextFile();
 #else
-                entry.close();
+                file.close();
 #endif
             }
 #ifdef ESP32
