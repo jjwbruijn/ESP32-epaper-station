@@ -1,9 +1,10 @@
 #include <Arduino.h>
 
-//#define NETWORK_MODE        // comment me in to enable network-mode. I'm ready to go in, coach, just give me a chance!
+//#define NETWORK_MODE        // comment me in to enable network-mode. I'm ready
+// to go in, coach, just give me a chance!
 
 #ifndef NETWORK_MODE
-    #define STANDALONE_MODE
+#define STANDALONE_MODE
 #endif
 
 #ifdef NETWORK_MODE
@@ -12,15 +13,14 @@
 #endif
 
 #ifdef STANDALONE_MODE
-    #define CHECK_IN_DELAY 900000
-    #define RETRY_DELAY 1000
-    #define FAILED_TILL_BLANK 2
-    #define FAILED_TILL_REASSOCIATE 1
+#define CHECK_IN_DELAY 900000
+#define RETRY_DELAY 1000
+#define FAILED_TILL_BLANK 2
+#define FAILED_TILL_REASSOCIATE 1
 #endif
 
 // this determines how long images will be cached;
 #define PENDING_TIMEOUT 120
-
 
 // flasher options
 #define CUSTOM_MAC_HDR 0x0000

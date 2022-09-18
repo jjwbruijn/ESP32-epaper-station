@@ -1,13 +1,16 @@
 
 /*   Autor: Aaron Christophel ATCnetz.de   */
 
+#include "zbs_interface.h"
+
 #include <Arduino.h>
 #include <stdint.h>
 #include <stdio.h>
-#include "zbs_interface.h"
+
 #include "settings.h"
 
-void simplePowerOn(){
+void simplePowerOn()
+{
     pinMode(ZBS_SS, INPUT);
     pinMode(ZBS_CLK, INPUT);
     pinMode(ZBS_MoSi, INPUT);
@@ -19,7 +22,8 @@ void simplePowerOn(){
     zbs.set_power(1);
 }
 
-uint8_t ZBS_interface::begin() {
+uint8_t ZBS_interface::begin()
+{
     _SS_PIN = ZBS_SS;
     _CLK_PIN = ZBS_CLK;
     _MOSI_PIN = ZBS_MoSi;
@@ -41,16 +45,18 @@ uint8_t ZBS_interface::begin() {
     return check_connection();
 }
 
-void ZBS_interface::set_power(uint8_t state) {
-            pinMode(ZBS_POWER1, INPUT);
-            pinMode(ZBS_POWER2, INPUT);
-            digitalWrite(ZBS_POWER1, state);
-            digitalWrite(ZBS_POWER2, state);
-            pinMode(ZBS_POWER1, OUTPUT);
-            pinMode(ZBS_POWER2, OUTPUT);
+void ZBS_interface::set_power(uint8_t state)
+{
+    pinMode(ZBS_POWER1, INPUT);
+    pinMode(ZBS_POWER2, INPUT);
+    digitalWrite(ZBS_POWER1, state);
+    digitalWrite(ZBS_POWER2, state);
+    pinMode(ZBS_POWER1, OUTPUT);
+    pinMode(ZBS_POWER2, OUTPUT);
 }
 
-void ZBS_interface::enable_debug() {
+void ZBS_interface::enable_debug()
+{
     digitalWrite(_RESET_PIN, HIGH);
     digitalWrite(_SS_PIN, HIGH);
     digitalWrite(_CLK_PIN, LOW);
@@ -78,7 +84,8 @@ void ZBS_interface::enable_debug() {
     delay(100);
 }
 
-void ZBS_interface::reset() {
+void ZBS_interface::reset()
+{
     pinMode(_SS_PIN, INPUT);
     pinMode(_CLK_PIN, INPUT);
     pinMode(_MOSI_PIN, INPUT);
@@ -91,10 +98,12 @@ void ZBS_interface::reset() {
     pinMode(_RESET_PIN, INPUT);
 }
 
-void ZBS_interface::send_byte(uint8_t data) {
+void ZBS_interface::send_byte(uint8_t data)
+{
     digitalWrite(_SS_PIN, LOW);
     delayMicroseconds(5);
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 8; i++)
+    {
         if (data & 0x80)
             digitalWrite(_MOSI_PIN, HIGH);
         else
@@ -109,11 +118,13 @@ void ZBS_interface::send_byte(uint8_t data) {
     digitalWrite(_SS_PIN, HIGH);
 }
 
-uint8_t ZBS_interface::read_byte() {
+uint8_t ZBS_interface::read_byte()
+{
     uint8_t data = 0x00;
     digitalWrite(_SS_PIN, LOW);
     delayMicroseconds(5);
-    for (int i = 0; i < 8; i++) {
+    for (int i = 0; i < 8; i++)
+    {
         data <<= 1;
         if (digitalRead(_MISO_PIN))
             data |= 1;
@@ -127,14 +138,16 @@ uint8_t ZBS_interface::read_byte() {
     return data;
 }
 
-void ZBS_interface::write_byte(uint8_t cmd, uint8_t addr, uint8_t data) {
+void ZBS_interface::write_byte(uint8_t cmd, uint8_t addr, uint8_t data)
+{
     send_byte(cmd);
     send_byte(addr);
     send_byte(data);
     delay(1);
 }
 
-uint8_t ZBS_interface::read_byte(uint8_t cmd, uint8_t addr) {
+uint8_t ZBS_interface::read_byte(uint8_t cmd, uint8_t addr)
+{
     uint8_t data = 0x00;
     send_byte(cmd);
     send_byte(addr);
@@ -143,7 +156,8 @@ uint8_t ZBS_interface::read_byte(uint8_t cmd, uint8_t addr) {
     return data;
 }
 
-void ZBS_interface::write_flash(uint16_t addr, uint8_t data) {
+void ZBS_interface::write_flash(uint16_t addr, uint8_t data)
+{
     send_byte(ZBS_CMD_W_FLASH);
     send_byte(addr >> 8);
     send_byte(addr);
@@ -151,7 +165,8 @@ void ZBS_interface::write_flash(uint16_t addr, uint8_t data) {
     delay(1);
 }
 
-uint8_t ZBS_interface::read_flash(uint16_t addr) {
+uint8_t ZBS_interface::read_flash(uint16_t addr)
+{
     uint8_t data = 0x00;
     send_byte(ZBS_CMD_R_FLASH);
     send_byte(addr >> 8);
@@ -161,37 +176,44 @@ uint8_t ZBS_interface::read_flash(uint16_t addr) {
     return data;
 }
 
-void ZBS_interface::write_ram(uint8_t addr, uint8_t data) {
+void ZBS_interface::write_ram(uint8_t addr, uint8_t data)
+{
     write_byte(ZBS_CMD_W_RAM, addr, data);
 }
 
-uint8_t ZBS_interface::read_ram(uint8_t addr) {
+uint8_t ZBS_interface::read_ram(uint8_t addr)
+{
     return read_byte(ZBS_CMD_R_RAM, addr);
 }
 
-void ZBS_interface::write_sfr(uint8_t addr, uint8_t data) {
+void ZBS_interface::write_sfr(uint8_t addr, uint8_t data)
+{
     write_byte(ZBS_CMD_W_SFR, addr, data);
 }
 
-uint8_t ZBS_interface::read_sfr(uint8_t addr) {
+uint8_t ZBS_interface::read_sfr(uint8_t addr)
+{
     return read_byte(ZBS_CMD_R_SFR, addr);
 }
 
-uint8_t ZBS_interface::check_connection() {
+uint8_t ZBS_interface::check_connection()
+{
     uint8_t test_byte = 0xA5;
     write_ram(0xba, test_byte);
     delay(1);
     return read_ram(0xba) == test_byte;
 }
 
-uint8_t ZBS_interface::select_flash(uint8_t page) {
+uint8_t ZBS_interface::select_flash(uint8_t page)
+{
     uint8_t sfr_low_bank = page ? 0x80 : 0x00;
     write_sfr(0xd8, sfr_low_bank);
     delay(1);
     return read_sfr(0xd8) == sfr_low_bank;
 }
 
-void ZBS_interface::erase_flash() {
+void ZBS_interface::erase_flash()
+{
     send_byte(ZBS_CMD_ERASE_FLASH);
     send_byte(0x00);
     send_byte(0x00);
@@ -199,7 +221,8 @@ void ZBS_interface::erase_flash() {
     delay(100);
 }
 
-void ZBS_interface::erase_infoblock() {
+void ZBS_interface::erase_infoblock()
+{
     send_byte(ZBS_CMD_ERASE_INFOBLOCK);
     send_byte(0x00);
     send_byte(0x00);

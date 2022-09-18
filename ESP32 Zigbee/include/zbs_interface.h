@@ -1,10 +1,9 @@
 #pragma once
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 
 /*   Autor: Aaron Christophel ATCnetz.de   */
 #include <Arduino.h>
-
 
 void simplePowerOn();
 
