@@ -112,13 +112,11 @@ void downloadFileToBuffer(pendingdata* pending) {
 }
 
 void getImageFileName(const uint8_t* mac, char* buffer) {
-    sprintf(buffer, "/%02X%02X%02X%02X%02X%02X%02X%02X.bmp", mac[7], mac[6],
-            mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
+    sprintf(buffer, "/%02X%02X%02X%02X%02X%02X%02X%02X.bmp", mac[7], mac[6],mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
 }
 
 void getStateFileName(const uint8_t* mac, char* buffer) {
-    sprintf(buffer, "/state_%02X%02X%02X%02X%02X%02X%02X%02X.json", mac[7],
-            mac[6], mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
+    sprintf(buffer, "/state_%02X%02X%02X%02X%02X%02X%02X%02X.json", mac[7],mac[6], mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
 }
 
 File getFileForMac(const uint8_t* dst) {
