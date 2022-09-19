@@ -23,7 +23,7 @@ void setup() {
 
     long timezone = 2;
     byte daysavetime = 1;
-    configTime(0,3600, "time.nist.gov", "0.pool.ntp.org", "1.pool.ntp.org");
+    configTime(0, 3600, "time.nist.gov", "0.pool.ntp.org", "1.pool.ntp.org");
     struct tm tmstruct;
     delay(2000);
     tmstruct.tm_year = 0;

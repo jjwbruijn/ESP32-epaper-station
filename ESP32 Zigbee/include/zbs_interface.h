@@ -1,16 +1,14 @@
 #pragma once
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 
 /*   Autor: Aaron Christophel ATCnetz.de   */
 #include <Arduino.h>
 
-
 void simplePowerOn();
 
-class ZBS_interface
-{
-public:
+class ZBS_interface {
+   public:
     uint8_t begin();
     void set_power(uint8_t state);
     void enable_debug();
@@ -30,7 +28,7 @@ public:
     void erase_flash();
     void erase_infoblock();
 
-private:
+   private:
     uint8_t _SS_PIN = -1;
     uint8_t _CLK_PIN = -1;
     uint8_t _MOSI_PIN = -1;
@@ -39,8 +37,7 @@ private:
     uint8_t _POWER_PIN = -1;
     int ZBS_spi_delay = 1;
 
-    typedef enum
-    {
+    typedef enum {
         ZBS_CMD_W_RAM = 0x02,
         ZBS_CMD_R_RAM = 0x03,
         ZBS_CMD_W_FLASH = 0x08,
@@ -51,8 +48,7 @@ private:
         ZBS_CMD_ERASE_INFOBLOCK = 0x48,
     } ZBS_CMD_LIST;
 
-    typedef enum
-    {
+    typedef enum {
         ZBS_ON = 1,
         ZBS_OFF = 0,
     } ZBS_POWER_STATE;

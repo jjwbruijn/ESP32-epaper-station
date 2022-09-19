@@ -1,5 +1,7 @@
 #include <Arduino.h>
+
 #include <vector>
+
 #pragma pack(push, 1)
 #pragma once
 

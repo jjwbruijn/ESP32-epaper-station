@@ -1,13 +1,15 @@
 
 /*   Autor: Aaron Christophel ATCnetz.de   */
 
+#include "zbs_interface.h"
+
 #include <Arduino.h>
 #include <stdint.h>
 #include <stdio.h>
-#include "zbs_interface.h"
+
 #include "settings.h"
 
-void simplePowerOn(){
+void simplePowerOn() {
     pinMode(ZBS_SS, INPUT);
     pinMode(ZBS_CLK, INPUT);
     pinMode(ZBS_MoSi, INPUT);
@@ -42,12 +44,12 @@ uint8_t ZBS_interface::begin() {
 }
 
 void ZBS_interface::set_power(uint8_t state) {
-            pinMode(ZBS_POWER1, INPUT);
-            pinMode(ZBS_POWER2, INPUT);
-            digitalWrite(ZBS_POWER1, state);
-            digitalWrite(ZBS_POWER2, state);
-            pinMode(ZBS_POWER1, OUTPUT);
-            pinMode(ZBS_POWER2, OUTPUT);
+    pinMode(ZBS_POWER1, INPUT);
+    pinMode(ZBS_POWER2, INPUT);
+    digitalWrite(ZBS_POWER1, state);
+    digitalWrite(ZBS_POWER2, state);
+    pinMode(ZBS_POWER1, OUTPUT);
+    pinMode(ZBS_POWER2, OUTPUT);
 }
 
 void ZBS_interface::enable_debug() {
@@ -95,10 +97,11 @@ void ZBS_interface::send_byte(uint8_t data) {
     digitalWrite(_SS_PIN, LOW);
     delayMicroseconds(5);
     for (int i = 0; i < 8; i++) {
-        if (data & 0x80)
+        if (data & 0x80) {
             digitalWrite(_MOSI_PIN, HIGH);
-        else
+        } else {
             digitalWrite(_MOSI_PIN, LOW);
+        }
         delayMicroseconds(ZBS_spi_delay);
         digitalWrite(_CLK_PIN, HIGH);
         delayMicroseconds(ZBS_spi_delay);
@@ -115,8 +118,9 @@ uint8_t ZBS_interface::read_byte() {
     delayMicroseconds(5);
     for (int i = 0; i < 8; i++) {
         data <<= 1;
-        if (digitalRead(_MISO_PIN))
+        if (digitalRead(_MISO_PIN)) {
             data |= 1;
+        }
         delayMicroseconds(ZBS_spi_delay);
         digitalWrite(_CLK_PIN, HIGH);
         delayMicroseconds(ZBS_spi_delay);

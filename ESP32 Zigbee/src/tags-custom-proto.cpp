@@ -89,7 +89,7 @@ void sendPending(uint8_t *dst, String pendingdatastr) {
 }
 
 void sendChunk(uint8_t *dst, struct ChunkReqInfo *chunkreq) {
-    uint8_t *data =(uint8_t *)calloc(sizeof(struct ChunkInfo) + chunkreq->len + 1, 1);
+    uint8_t *data = (uint8_t *)calloc(sizeof(struct ChunkInfo) + chunkreq->len + 1, 1);
     struct ChunkInfo *chunk = (struct ChunkInfo *)(data + 1);
     *data = PKT_CHUNK_RESP;
     memset(chunk, 0, sizeof(struct PendingInfo));
@@ -222,7 +222,7 @@ void processChunkReq(const uint8_t *src, const struct ChunkReqInfo *chunkreq) {
 
 void processCheckin(const uint8_t *src, const struct CheckinInfo *ci) {
     // process check-in data
-    Serial.printf("Check-in from: %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X -> Temp: %d - Battery>=%dmV\n", src[7], src[6], src[5], src[4], src[3], src[2], src[1], src[0], ci->temperature-CHECKIN_TEMP_OFFSET, ci->state.batteryMv);
+    Serial.printf("Check-in from: %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X -> Temp: %d - Battery>=%dmV\n", src[7], src[6], src[5], src[4], src[3], src[2], src[1], src[0], ci->temperature - CHECKIN_TEMP_OFFSET, ci->state.batteryMv);
     DynamicJsonDocument checkin(2048);
     char sbuffer[32];
 #ifdef STANDALONE_MODE
@@ -315,7 +315,6 @@ void processAssociateReq(const uint8_t *src, const struct TagInfo *taginfo) {
     serializeJson(assocreq, file);
     file.flush();
     file.close();
-
 #endif
 
 #ifdef NETWORK_MODE
@@ -330,21 +329,27 @@ void processAssociateReq(const uint8_t *src, const struct TagInfo *taginfo) {
 
 void parsePacket(const uint8_t *src, const uint8_t *data, const uint8_t len) {
     portYIELD();
-    if (data[0] == PKT_ASSOC_REQ) {
-        Serial.printf("Association request received\n");
-        const struct TagInfo *taginfo = (const struct TagInfo *)(data + 1);
-        processAssociateReq(src, taginfo);
-    } else if (data[0] == PKT_ASSOC_RESP) {  // not relevant for a base
-        Serial.printf("Association response. Not doing anything with that...\n");
-        const struct AssocInfo *associnfo = (const struct AssocInfo *)(data + 1);
-    } else if (data[0] == PKT_CHECKIN) {
-        const struct CheckinInfo *ci = (const struct CheckinInfo *)(data + 1);
-        processCheckin(src, ci);
-    } else if (data[0] == PKT_CHUNK_REQ) {
-        const struct ChunkReqInfo *chunkreq =
-            (const struct ChunkReqInfo *)(data + 1);
-        processChunkReq(src, chunkreq);
-    } else {
-        Serial.printf("Received a frame of type %02X, currently unimplemented :<\n", data[0]);
+    switch (data[0]) {
+        case PKT_ASSOC_REQ: {
+            Serial.printf("Association request received\n");
+            const struct TagInfo *taginfo = (const struct TagInfo *)(data + 1);
+            processAssociateReq(src, taginfo);
+        } break;
+        case PKT_ASSOC_RESP: {  // not relevant for a base
+            Serial.printf("Association response. Not doing anything with that...\n");
+            // const struct AssocInfo *associnfo = (const struct AssocInfo *)(data + 1);
+        } break;
+        case PKT_CHECKIN: {
+            const struct CheckinInfo *ci = (const struct CheckinInfo *)(data + 1);
+            processCheckin(src, ci);
+        } break;
+        case PKT_CHUNK_REQ: {
+            const struct ChunkReqInfo *chunkreq = (const struct ChunkReqInfo *)(data + 1);
+            processChunkReq(src, chunkreq);
+        } break;
+
+        default:
+            Serial.printf("Received a frame of type %02X, currently unimplemented :<\n", data[0]);
+            break;
     }
 }

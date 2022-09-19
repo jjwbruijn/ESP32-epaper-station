@@ -89,7 +89,6 @@ String getImageData(uint64_t& ver, uint32_t& len, const uint8_t* dst) {
         len = file.size();
         file.close();
         return String(buffer);
-        ;
     } else {
         ver = 0;
         len = 0;
@@ -106,17 +105,19 @@ void downloadFileToBuffer(pendingdata* pending) {
     while (file.available()) {
         pending->data[index] = file.read();
         index++;
-        if ((index % 256) == 0) portYIELD();
+        if ((index % 256) == 0) {
+            portYIELD();
+        }
     }
     file.close();
 }
 
 void getImageFileName(const uint8_t* mac, char* buffer) {
-    sprintf(buffer, "/%02X%02X%02X%02X%02X%02X%02X%02X.bmp", mac[7], mac[6],mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
+    sprintf(buffer, "/%02X%02X%02X%02X%02X%02X%02X%02X.bmp", mac[7], mac[6], mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
 }
 
 void getStateFileName(const uint8_t* mac, char* buffer) {
-    sprintf(buffer, "/state_%02X%02X%02X%02X%02X%02X%02X%02X.json", mac[7],mac[6], mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
+    sprintf(buffer, "/state_%02X%02X%02X%02X%02X%02X%02X%02X.json", mac[7], mac[6], mac[5], mac[4], mac[3], mac[2], mac[1], mac[0]);
 }
 
 File getFileForMac(const uint8_t* dst) {
