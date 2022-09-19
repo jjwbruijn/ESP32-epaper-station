@@ -1,22 +1,24 @@
-#include <Arduino.h>
-#include <WiFi.h>
-#include <HTTPClient.h>
-#include <ArduinoJson.h>
 #include "http.h"
+
+#include <Arduino.h>
+#include <ArduinoJson.h>
+#include <HTTPClient.h>
+#include <WiFi.h>
+
 #include "settings.h"
 
 #ifdef NETWORK_MODE
 uint32_t getDataFromHTTP(uint8_t** data, String filename) {
     HTTPClient http;
     uint16_t ret = 0;
-    http.begin(WEBSERVER_PATH+filename);
+    http.begin(WEBSERVER_PATH + filename);
     int httpCode = http.GET();
 
     if (httpCode > 0) {
         String payload = http.getString();
         ret = http.getSize();
         *data = (uint8_t*)calloc(ret, 1);
-        memcpy(*data,payload.begin(),ret);
+        memcpy(*data, payload.begin(), ret);
     } else {
         data = 0;
         Serial.printf("Error on HTTP request! Tried to get %s but something went TERRIBLY wrong.\n", filename);

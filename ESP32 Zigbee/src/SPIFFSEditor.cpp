@@ -461,7 +461,7 @@ void SPIFFSEditor::handleRequest(AsyncWebServerRequest *request) {
 #endif
                     continue;
                 }
-                if (output != "[") { 
+                if (output != "[") {
                     output += ',';
                 }
                 output += "{\"type\":\"";
@@ -513,7 +513,7 @@ void SPIFFSEditor::handleRequest(AsyncWebServerRequest *request) {
             request->send(200, "", "UPLOADED: " + request->getParam("data", true, true)->value());
         } else {
             request->send(500);
-        } 
+        }
     } else if (request->method() == HTTP_PUT) {
         if (request->hasParam("path", true)) {
             String filename = request->getParam("path", true)->value();

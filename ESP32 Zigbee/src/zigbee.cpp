@@ -25,12 +25,13 @@ uint32_t preshared_key[4] = PROTO_PRESHARED_KEY;
 uint8_t sequence = 0;
 uint8_t devicemac[8] = {0};
 
-void dumpHex(void* p, uint16_t len) {
+void dumpHex(const void* p, const uint16_t len) {
+    const uint8_t* data = (const uint8_t*)p;
     for (uint16_t c = 0; c < len; c++) {
         if (c % 16 == 0) {
             Serial.printf("\n%02X: ", c);
         }
-        Serial.printf("%02X ", ((uint8_t*)p)[c]);
+        Serial.printf("%02X ", data[c]);
     }
     Serial.printf("\n");
 }
@@ -145,12 +146,13 @@ void decodePacket(const uint8_t* p, uint8_t len) {
     memcpy(ccm_data.tag, (void*)(p + (len - 8)), 4);
     memcpy(ccm_data.hdr, p, ccm_data.hdrsize);
 
-    bool isValid = decrypt(&ccm_data);
+    const bool isValid = decrypt(&ccm_data);
     // Serial.print("output:\n");
     // dumpHex(ccm_data.data, ccm_data.datalen);
 
-    if (isValid)
+    if (isValid) {
         parsePacket(src, ccm_data.data, ccm_data.datalen);
+    }
 
     // free the memory for the encryption related data;
     free(ccm_data.encrypted);
@@ -164,7 +166,7 @@ void encodePacket(const uint8_t* dst, uint8_t* data, const uint8_t len) {
     } else {
         // Serial.printf("DATA=");
         // dumpHex(data, len);
-        uint8_t totallen = sizeof(struct MacFrameNormal) + len + 4 + 4;  //(tag + nonce);
+        const uint8_t totallen = sizeof(struct MacFrameNormal) + len + 4 + 4;  //(tag + nonce);
         struct MacFrameNormal hdr;
         memset(&hdr, 0, sizeof(struct MacFrameNormal));
         memcpy(hdr.dst, dst, 8);
@@ -183,7 +185,7 @@ void encodePacket(const uint8_t* dst, uint8_t* data, const uint8_t len) {
         ccm.encrypted = output + sizeof(struct MacFrameNormal);
         ccm.hdr = (uint8_t*)&hdr;
         ccm.hdrsize = sizeof(struct MacFrameNormal);
-        uint32_t timestamp = millis();
+        const uint32_t timestamp = millis();
         memcpy(output + totallen - 4, &timestamp, 4);
         memcpy(ccm.nonce, &timestamp, 4);
         memcpy(ccm.nonce + 4, devicemac, 8);

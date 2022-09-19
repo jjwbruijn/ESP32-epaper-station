@@ -28,7 +28,6 @@ typedef enum {
 uint8_t *infoblock = nullptr;
 uint8_t *flashbuffer = nullptr;
 
-
 // look for the latest version of the firmware file... It's supposed to be something like zigbeebase0003.bin
 String lookupFirmwareFile(uint16_t &version) {
     String filename;
@@ -108,9 +107,11 @@ uint64_t getInfoBlockMac() {
 
 // get info from infoblock (eeprom flash, kinda)
 void readInfoBlock() {
-    if (infoblock == nullptr)
-        infoblock = (uint8_t *)calloc(1024, 1);  // allocate room for infopage
-    zbs.select_flash(1);                         // select info page
+    if (infoblock == nullptr) {
+        // allocate room for infopage
+        infoblock = (uint8_t *)calloc(1024, 1);
+    }
+    zbs.select_flash(1);  // select info page
     for (uint16_t c = 0; c < 1024; c++) {
         infoblock[c] = zbs.read_flash(c);
     }
@@ -118,21 +119,27 @@ void readInfoBlock() {
 
 // write info to infoblock
 void writeInfoBlock() {
-    if (infoblock == nullptr) return;
+    if (infoblock == nullptr) {
+        return;
+    }
     zbs.select_flash(1);
     zbs.erase_infoblock();
     zbs.select_flash(1);  // select info page
     for (uint16_t c = 0; c < 1024; c++) {
         for (uint8_t i = 0; i < MAX_WRITE_ATTEMPTS; i++) {
             zbs.write_flash(c, infoblock[c]);
-            if (zbs.read_flash(c) == infoblock[c]) break;
+            if (zbs.read_flash(c) == infoblock[c]) {
+                break;
+            }
         }
     }
 }
 
 // erase flash and program from flash buffer
 void writeFlashBlock(uint16_t size) {
-    if (flashbuffer == nullptr) return;
+    if (flashbuffer == nullptr) {
+        return;
+    }
     zbs.select_flash(0);
     zbs.erase_flash();
     zbs.select_flash(0);
@@ -141,9 +148,13 @@ void writeFlashBlock(uint16_t size) {
     for (uint16_t c = 0; c < size; c++) {
         for (i = 0; i < MAX_WRITE_ATTEMPTS; i++) {
             zbs.write_flash(c, flashbuffer[c]);
-            if (zbs.read_flash(c) == flashbuffer[c]) break;
+            if (zbs.read_flash(c) == flashbuffer[c]) {
+                break;
+            }
         }
-        if (i == MAX_WRITE_ATTEMPTS) Serial.printf("\nFailed to write byte at c\n");
+        if (i == MAX_WRITE_ATTEMPTS) {
+            Serial.printf("\nFailed to write byte at c\n");
+        }
         if (c % 256 == 0) {
             Serial.printf("\rNow flashing, %d/%d...", c, size);
             vTaskDelay(1 / portTICK_PERIOD_MS);

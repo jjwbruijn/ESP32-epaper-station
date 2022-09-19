@@ -5,11 +5,10 @@
 #include <ESPAsyncWebServer.h>
 #include <ESPmDNS.h>
 #include <FS.h>
+#include <LittleFS.h>
 #include <SPIFFSEditor.h>
 #include <WiFi.h>
 #include <WiFiManager.h>  // https://github.com/tzapu/WiFiManager/tree/feature_asyncwebserver
-
-#include <LittleFS.h>
 
 #include "settings.h"
 
@@ -20,15 +19,15 @@ const char *http_password = "admin";
 AsyncWebServer server(80);
 
 void WriteBMP(const char *filename, uint8_t *pData, int width, int height, int bpp) {
-    int lsize = 0, i, iHeaderSize, iBodySize;
-    uint8_t pBuf[128];  // holds BMP header
+    int lsize = 0;
     File file_out = LittleFS.open(filename, "wb");
 
     lsize = (lsize + 3) & 0xfffc;  // DWORD aligned
-    iHeaderSize = 54;
+    int iHeaderSize = 54;
     iHeaderSize += (1 << (bpp + 2));
-    iBodySize = lsize * height;
-    i = iBodySize + iHeaderSize;  // datasize
+    const int iBodySize = lsize * height;
+    int i = iBodySize + iHeaderSize;  // datasize
+    uint8_t pBuf[128];                // holds BMP header
     memset(pBuf, 0, 54);
     pBuf[0] = 'B';
     pBuf[1] = 'M';
@@ -36,7 +35,7 @@ void WriteBMP(const char *filename, uint8_t *pData, int width, int height, int b
     pBuf[3] = (i >> 8) & 0xff;
     pBuf[4] = (i >> 16) & 0xff;
     pBuf[5] = (i >> 24) & 0xff;
-    /* Offset to data bits */
+    // Offset to data bits
     pBuf[10] = iHeaderSize & 0xff;
     pBuf[11] = (unsigned char)(iHeaderSize >> 8);
     pBuf[14] = 0x28;
@@ -87,7 +86,6 @@ void init_web() {
         request->send(200, "text/plain", String(ESP.getFreeHeap()));
     });
 
-
     server.on("/reboot", HTTP_POST, [](AsyncWebServerRequest *request) {
         request->send(200, "text/plain", "OK Reboot");
         ESP.restart();
@@ -96,41 +94,50 @@ void init_web() {
     server.serveStatic("/", LittleFS, "/").setDefaultFile("index.htm");
 
     server.onNotFound([](AsyncWebServerRequest *request) {
-        if (request->url() == "/" || request->url() == "index.htm") { 
+        if (request->url() == "/" || request->url() == "index.htm") {
             request->send(200, "text/html", "-");
             return;
         }
         Serial.printf("NOT_FOUND: ");
-        if (request->method() == HTTP_GET)
-            Serial.printf("GET");
-        else if (request->method() == HTTP_POST)
-            Serial.printf("POST");
-        else if (request->method() == HTTP_DELETE)
-            Serial.printf("DELETE");
-        else if (request->method() == HTTP_PUT)
-            Serial.printf("PUT");
-        else if (request->method() == HTTP_PATCH)
-            Serial.printf("PATCH");
-        else if (request->method() == HTTP_HEAD)
-            Serial.printf("HEAD");
-        else if (request->method() == HTTP_OPTIONS)
-            Serial.printf("OPTIONS");
-        else
-            Serial.printf("UNKNOWN");
+
+        switch (request->method()) {
+            case HTTP_GET:
+                Serial.printf("GET");
+                break;
+            case HTTP_POST:
+                Serial.printf("POST");
+                break;
+            case HTTP_DELETE:
+                Serial.printf("DELETE");
+                break;
+            case HTTP_PUT:
+                Serial.printf("PUT");
+                break;
+            case HTTP_PATCH:
+                Serial.printf("PATCH");
+                break;
+            case HTTP_HEAD:
+                Serial.printf("HEAD");
+                break;
+            case HTTP_OPTIONS:
+                Serial.printf("OPTIONS");
+                break;
+
+            default:
+                Serial.printf("UNKNOWN");
+                break;
+        }
         Serial.printf(" http://%s%s\n", request->host().c_str(), request->url().c_str());
 
         if (request->contentLength()) {
             Serial.printf("_CONTENT_TYPE: %s\n", request->contentType().c_str());
             Serial.printf("_CONTENT_LENGTH: %u\n", request->contentLength());
         }
-        int headers = request->headers();
-        int i;
-        for (i = 0; i < headers; i++) {
+        for (int i = 0; i < request->headers(); i++) {
             AsyncWebHeader *h = request->getHeader(i);
             Serial.printf("_HEADER[%s]: %s\n", h->name().c_str(), h->value().c_str());
         }
-        int params = request->params();
-        for (i = 0; i < params; i++) {
+        for (int i = 0; i < request->params(); i++) {
             AsyncWebParameter *p = request->getParam(i);
             if (p->isFile()) {
                 Serial.printf("_FILE[%s]: %s, size: %u\n", p->name().c_str(), p->value().c_str(), p->size());
