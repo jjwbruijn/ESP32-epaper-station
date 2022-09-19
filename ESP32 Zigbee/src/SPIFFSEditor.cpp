@@ -441,13 +441,12 @@ void SPIFFSEditor::handleRequest(AsyncWebServerRequest *request) {
 
     if (request->method() == HTTP_GET) {
         if (request->hasParam("list")) {
-            String path = request->getParam("list")->value();
+            const String path = request->getParam("list")->value();
 #ifdef ESP32
             File dir = _fs.open(path);
 #else
             Dir dir = _fs.openDir(path);
 #endif
-            path = String();
             String output = "[";
 #ifdef ESP32
             File file = dir.openNextFile();
@@ -468,11 +467,11 @@ void SPIFFSEditor::handleRequest(AsyncWebServerRequest *request) {
                 output += "{\"type\":\"";
                 output += "file";
                 output += "\",\"name\":\"";
-                output += String(file.name());
+                output += file.name();
                 output += "\",\"size\":";
-                output += String(file.size());
+                output += file.size();
                 output += ",\"ver\":";
-                output += (((uint64_t)(file.getLastWrite())) << 32) | ((uint64_t)(file.getLastWrite()));
+                output += file.getLastWrite();
                 output += "}";
 #ifdef ESP32
                 file = dir.openNextFile();
@@ -485,7 +484,6 @@ void SPIFFSEditor::handleRequest(AsyncWebServerRequest *request) {
 #endif
             output += "]";
             request->send(200, "application/json", output);
-            output = String();
         } else if (request->hasParam("edit") || request->hasParam("download")) {
             request->send(request->_tempFile, request->_tempFile.name(), String(), request->hasParam("download"));
         } else {
