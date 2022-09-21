@@ -1,3 +1,5 @@
+#include "serial.h"
+
 #include <Arduino.h>
 #include <HardwareSerial.h>
 
@@ -14,19 +16,78 @@
 #define ZBS_RX_WAIT_MAC 5
 #define ZBS_RX_WAIT_VER 6
 
-void zbsTx(uint8_t* packetdata, uint8_t len) {
+#define QUEUESIZE 50
+QueueHandle_t outQueue;
+QueueHandle_t inQueue;
+
+#define STATE_TX_COMPLETE 0
+#define STATE_TX_CRC_ERROR 1
+#define STATE_TX_ERROR 2
+#define STATE_TX_WAIT 3
+#define STATE_TX_RDY 4
+
+volatile uint8_t txcState = STATE_TX_COMPLETE;
+
+uint8_t RXState = ZBS_RX_WAIT_HEADER;
+
+void zbsTx(uint8_t* packetdata, uint8_t len, uint8_t retry) {
+    uint8_t crc = 0;
+    for (uint8_t i = 0; i < len; i++) {
+        crc ^= packetdata[i];
+    }
+
+    Serial1.print("RDY?");
+    uint8_t c = 0;
+    while (txcState != STATE_TX_RDY) {
+        c++;
+        if (c % 5 == 0) Serial1.print("RDY?");
+        vTaskDelay(1 / portTICK_PERIOD_MS);
+    }
+
     Serial1.printf("PKT>");
     Serial1.write(len);
+    Serial1.write(crc);
     while (len) {
         Serial1.write(*packetdata);
         ++packetdata;
         --len;
     }
+
+    txcState = STATE_TX_WAIT;
+    unsigned long startt = millis();
+    while (startt + 15 > millis()) {
+        vTaskDelay(2 / portTICK_PERIOD_MS);
+        Serial1.write(0x00);
+        switch (txcState) {
+            case STATE_TX_COMPLETE:
+                return;
+            case STATE_TX_CRC_ERROR:
+                Serial.print("CRC ERROR :(\n");
+                zbsTx(packetdata, len, retry);
+                return;
+            case STATE_TX_ERROR:
+                Serial.print("TX ERROR...\n");
+                zbsTx(packetdata, len, retry);
+                return;
+            case STATE_TX_WAIT:
+                break;
+        }
+    }
+    if (retry--) {
+        zbsTx(packetdata, len, retry);
+    } else {
+        Serial.printf("\nXMIT TIMED OUT!\n", txcState, RXState);
+    }
 }
 
 void zbsRxTask(void* parameter) {
     Serial1.begin(230400, SERIAL_8N1, RXD1, TXD1);
-    uint8_t RXState = ZBS_RX_WAIT_HEADER;
+
+    inQueue = xQueueCreate(QUEUESIZE, sizeof(struct serialFrame*));
+    outQueue = xQueueCreate(QUEUESIZE, sizeof(struct serialFrame*));
+
+    xTaskCreate(zigbeeDecodeTask, "zigbee decode process", 10000, NULL, 2, NULL);
+
     char cmdbuffer[4] = {0};
     uint8_t* packetp = nullptr;
     uint8_t pktlen = 0;
@@ -40,7 +101,7 @@ void zbsRxTask(void* parameter) {
     while (1) {
         if (Serial1.available()) {
             lastchar = Serial1.read();
-            // Serial.write(lastchar);
+            //Serial.write(lastchar);
             switch (RXState) {
                 case ZBS_RX_WAIT_HEADER:
                     // shift characters in
@@ -66,6 +127,18 @@ void zbsRxTask(void* parameter) {
                         charindex = 0;
                         memset(cmdbuffer, 0x00, 4);
                     }
+                    if (strncmp(cmdbuffer, "TXC>", 4) == 0) {
+                        txcState = STATE_TX_COMPLETE;
+                    }
+                    if (strncmp(cmdbuffer, "TXF!", 4) == 0) {
+                        txcState = STATE_TX_ERROR;
+                    }
+                    if (strncmp(cmdbuffer, "CRC!", 4) == 0) {
+                        txcState = STATE_TX_CRC_ERROR;
+                    }
+                    if (strncmp(cmdbuffer, "RDY>", 4) == 0) {
+                        txcState = STATE_TX_RDY;
+                    }
                     break;
                 case ZBS_RX_WAIT_PKT_LEN:
                     pktlen = lastchar;
@@ -81,8 +154,15 @@ void zbsRxTask(void* parameter) {
                     packetp[pktindex] = lastchar;
                     pktindex++;
                     if (pktindex == pktlen) {
-                        decodePacket(packetp, pktlen);
-                        free(packetp);
+                        struct serialFrame* frame = new struct serialFrame;
+                        frame->len = pktlen;
+                        frame->data = packetp;
+                        BaseType_t queuestatus = xQueueSend(inQueue, &frame, 0);
+                        if (queuestatus == pdFALSE) {
+                            Serial.print("input queue is full...\n");
+                            free(frame->data);
+                            delete frame;
+                        }
                         RXState = ZBS_RX_WAIT_HEADER;
                     }
                     break;

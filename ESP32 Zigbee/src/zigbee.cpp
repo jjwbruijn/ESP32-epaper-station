@@ -4,7 +4,8 @@
 
 #include "mbedtls/aes.h"
 #include "mbedtls/ccm.h"
-#include "serial.h"             // <<
+#include "serial.h"  // <<
+#include "settings.h"
 #include "tags-custom-proto.h"  // >>
 #if DEBUG_LEVEL > 0
 #include "mbedtls/debug.h"
@@ -106,6 +107,19 @@ bool encrypt(struct ccm_data* ccm_data) {
     return true;
 }
 
+void zigbeeDecodeTask(void* parameter) {
+    while (true) {
+        struct serialFrame* f;
+        BaseType_t rx = xQueueReceive(inQueue, &f, portMAX_DELAY);
+        if (rx == pdTRUE) {
+            decodePacket(f->data, f->len);
+            free(f->data);
+            delete f;
+        }
+        vTaskDelay(1/portTICK_PERIOD_MS);
+    }
+}
+
 void decodePacket(const uint8_t* p, uint8_t len) {
     // dumpHex(p, len);
 
@@ -177,6 +191,7 @@ void encodePacket(const uint8_t* dst, uint8_t* data, const uint8_t len) {
         hdr.fcs.panIdCompressed = 1;
         hdr.fcs.destAddrType = 3;
         hdr.fcs.srcAddrType = 3;
+        //hdr.fcs.ackReqd = 1;
         struct ccm_data ccm;
         memset(&ccm, 0, sizeof(struct ccm_data));
         uint8_t* output = (uint8_t*)calloc(totallen, 1);
@@ -194,7 +209,7 @@ void encodePacket(const uint8_t* dst, uint8_t* data, const uint8_t len) {
         encrypt(&ccm);
         // dumpCcm(&ccm);
         memcpy(output + totallen - 8, ccm.tag, 4);
-        zbsTx(output, totallen);
+        zbsTx(output, totallen, ZIGBEE_ATTEMPTS);
         // Serial.printf("total=");
         // dumpHex(output, totallen);
         free(output);
