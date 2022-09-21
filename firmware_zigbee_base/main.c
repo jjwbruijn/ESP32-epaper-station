@@ -14,7 +14,7 @@
 #include "timer.h"
 #include "wdt.h"
 
-uint16_t version = 0x0002;
+uint16_t version = 0x0011;
 
 static uint8_t __xdata mRxBuf[COMMS_MAX_PACKET_SZ];
 
@@ -24,11 +24,13 @@ uint8_t __xdata packetp[128];
 uint8_t __xdata pktindex = 0;
 uint8_t __xdata RXState = 0;
 uint8_t __xdata pktlen = 0;
+uint8_t __xdata serialCRC = 0;
+uint8_t __xdata serialCalc = 0;
 
 #define ZBS_RX_WAIT_HEADER 0
 #define ZBS_RX_WAIT_PKT_LEN 1
 #define ZBS_RX_WAIT_PKT_RX 2
-#define ZBS_RX_WAIT_SEP1 3
+#define ZBS_RX_WAIT_PKT_CRC 3
 
 void processSerial(uint8_t lastchar) {
     // uartTx(lastchar); echo
@@ -49,21 +51,37 @@ void processSerial(uint8_t lastchar) {
             if (strncmp(cmdbuffer, "VER?", 4) == 0) {
                 pr("VER>%04X\n", version);
             }
+            if (strncmp(cmdbuffer, "RDY?", 4) == 0) {
+                pr("RDY>");
+            }
             if (strncmp(cmdbuffer, "RSET", 4) == 0) {
                 wdtDeviceReset();
             }
-
             break;
         case ZBS_RX_WAIT_PKT_LEN:
             pktlen = lastchar;
-            RXState = ZBS_RX_WAIT_PKT_RX;
+            RXState = ZBS_RX_WAIT_PKT_CRC;
+            break;
+        case ZBS_RX_WAIT_PKT_CRC:
+            serialCRC = lastchar;
+            serialCalc = 0;
             pktindex = 0;
+            RXState = ZBS_RX_WAIT_PKT_RX;
             break;
         case ZBS_RX_WAIT_PKT_RX:
             packetp[pktindex] = lastchar;
+            serialCalc ^= lastchar;
             pktindex++;
             if (pktindex == pktlen) {
-                commsTxUnencrypted(packetp, pktlen);
+                if (serialCalc == serialCRC) {
+                    if (commsTxUnencrypted(packetp, pktlen)) {
+                        pr("TXC>");
+                    } else {
+                        pr("TXF!");
+                    }
+                } else {
+                    pr("CRC!\n");
+                }
                 RXState = ZBS_RX_WAIT_HEADER;
             }
             break;
@@ -96,7 +114,7 @@ void main(void) {
 
     // init the "random" number generation unit
     rndSeed(mSelfMac[0] ^ (uint8_t)timerGetLowBits(), mSelfMac[1]);
-    wdtSetResetVal(0xFE0DCF);
+    wdtSetResetVal(0xFD0DCF);
     wdtOn();
     if (1) {
         radioSetChannel(RADIO_FIRST_CHANNEL);
@@ -112,13 +130,14 @@ void main(void) {
                 for (uint8_t len = 0; len < ret; len++) {
                     uartTx(mRxBuf[len]);
                 }
-                // pr("|%02X%02X", mLastRSSI, mLastLqi); // reading RSSI/LQI seems broken... Needs to be fixed
+                // wdtSetResetVal(0xFE0DCF);
+                //  pr("|%02X%02X", mLastRSSI, mLastLqi); // reading RSSI/LQI seems broken... Needs to be fixed
             }
 
-            if (uartBytesAvail()) {
+            while (uartBytesAvail()) {
                 processSerial(uartRx());
             }
-            wdtSetResetVal(0xFE0DCF);  // watchdog doesn't seem to want to be petted, keeps barking.
+            wdtSetResetVal(0xFD0DCF);  // watchdog doesn't seem to want to be petted, keeps barking.
         }
     }
 }

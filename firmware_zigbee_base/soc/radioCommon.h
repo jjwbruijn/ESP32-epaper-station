@@ -37,7 +37,7 @@ struct MacFcs {
 
 
 void radioInit(void);
-void radioTx(const void __xdata* packet);		//waits for tx end
+bool radioTx(const void __xdata* packet);		//waits for tx end
 
 #pragma callee_saves radioRxAckReset
 void radioRxAckReset(void);
