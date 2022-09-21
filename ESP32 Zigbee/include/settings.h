@@ -18,6 +18,9 @@
     #define FAILED_TILL_REASSOCIATE 1
 #endif
 
+// how many times we should try to send a packet
+#define ZIGBEE_ATTEMPTS 5
+
 // this determines how long images will be cached;
 #define PENDING_TIMEOUT 120
 

@@ -155,7 +155,12 @@ void sendPending(const uint8_t *dst, const struct CheckinInfo *ci) {
     pi->osUpdateSize = len;
 
     // send packet out
-    encodePacket(dst, data, sizeof(struct PendingInfo) + 1);
+    //unsigned long begin = millis();
+    //for(uint16_t c = 0; c<1000; c++){
+    //    Serial.printf("%d\r", c);
+        encodePacket(dst, data, sizeof(struct PendingInfo) + 1);
+    //}
+    //Serial.printf("\ntime=%d\n", millis()-begin);
     Serial.printf("Sending pending to: %02X:%02X:%02X:%02X:%02X:%02X:%02X:%02X -> imgVer %lld osVer %lld\n", dst[7], dst[6], dst[5], dst[4], dst[3], dst[2], dst[1], dst[0], pi->imgUpdateVer, pi->osUpdateVer);
 
     // save information about pending data to array

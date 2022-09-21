@@ -56,3 +56,4 @@ struct MacFrameBcast {
 void decodePacket(const uint8_t* p, const uint8_t len);
 void encodePacket(const uint8_t* dst, uint8_t* data, const uint8_t len);
 void dumpHex(const void* p, const uint16_t len);
+void zigbeeDecodeTask(void* parameter);
